@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grace-Field College Quiz Competition</title>
+<style>
+:root{
+  --red:#b91c2b; --blue:#164a9e; --deepblue:#0a2a63; --gold:#d4af37; --ink:#1c1c1c;
+  --bg:#f4f1ea; --card:#ffffff; --ok:#1a8f3c; --bad:#c0292f;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#1b1a17; --card:#2a2825; --ink:#f2efe8; }
+}
+:root[data-theme="dark"]{ --bg:#1b1a17; --card:#2a2825; --ink:#f2efe8; }
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);}
+.topbar{position:sticky;top:0;top:env(safe-area-inset-top,0px);z-index:10;background:linear-gradient(90deg,var(--red),var(--blue));
+  display:flex;align-items:center;gap:10px;padding:8px 14px;flex-wrap:wrap;}
+.topbar img{height:34px;border-radius:6px;background:#fff;padding:2px;}
+.topbar b{color:#fff;font-size:15px;margin-right:auto;}
+.topbar button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);
+  padding:6px 12px;border-radius:20px;font-size:13px;cursor:pointer;}
+.topbar button:hover{background:rgba(255,255,255,.3);}
+.wrap{max-width:900px;margin:0 auto;padding:24px 16px 60px;}
+.screen{display:none;}
+.screen.active{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.card{background:var(--card);border-radius:16px;padding:26px;box-shadow:0 6px 22px rgba(0,0,0,.12);}
+h1{font-size:clamp(22px,5vw,34px);color:var(--red);margin:.2em 0;text-align:center;}
+h2{color:var(--blue);text-align:center;}
+.center{text-align:center;}
+.cover img{height:120px;margin-bottom:8px;}
+.cover h1{font-size:clamp(30px,7.5vw,48px);line-height:1.15;}
+.cover h1 .gf{color:var(--deepblue);}
+.cover h1 .ci{color:var(--red);}
+.subtitle{color:var(--deepblue);font-weight:700;letter-spacing:1px;text-align:center;font-size:clamp(17px,3.4vw,24px);}
+.addr{text-align:center;font-size:13px;opacity:.75;margin-top:6px;}
+.big-btn{display:block;margin:26px auto 0;background:var(--red);color:#fff;border:none;padding:14px 36px;
+  font-size:18px;border-radius:30px;cursor:pointer;box-shadow:0 4px 14px rgba(185,28,43,.4);}
+.big-btn:hover{filter:brightness(1.08);}
+ul.rules{font-size:16px;line-height:1.7;}
+ul.rules li::marker{color:var(--red);font-weight:bold;}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px;}
+.qnum{aspect-ratio:1;border-radius:50%;border:3px solid var(--blue);background:var(--card);
+  font-size:20px;font-weight:700;color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qnum:hover{background:var(--blue);color:#fff;}
+.qnum.used{border-color:#999;color:#999;background:repeating-linear-gradient(45deg,#eee,#eee 4px,#ddd 4px,#ddd 8px);cursor:not-allowed;text-decoration:line-through;}
+.qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.qhead img{height:44px;}
+.badge{background:var(--blue);color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;}
+.timerbox{text-align:center;margin:6px 0 18px;}
+.timer{font-size:52px;font-weight:800;color:var(--red);}
+.timer.low{color:var(--bad);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
+.timerlabel{font-size:13px;opacity:.7;text-transform:uppercase;letter-spacing:1px;}
+.qtext{font-size:clamp(18px,3.2vw,24px);text-align:center;margin:10px 0 22px;font-weight:600;}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:560px){.opts{grid-template-columns:1fr;}}
+.opt{background:var(--card);border:2px solid var(--blue);border-radius:12px;padding:16px;font-size:17px;
+  cursor:pointer;text-align:left;color:var(--ink);}
+.opt b{color:var(--blue);margin-right:8px;}
+.opt:hover:not(:disabled){background:#eef3fb;}
+.opt:disabled{cursor:not-allowed;}
+.opt.wrong{background:#ffdada;border-color:var(--bad);color:#7a0000;}
+.opt.wrong b{color:#7a0000;}
+.opt.correct-reveal-opt{background:#e0f7e6;border-color:var(--ok);color:#0b5b22;}
+.opt.correct-reveal-opt b{color:#0b5b22;}
+#revealWrap p{font-weight:700;color:var(--ok);}
+.feedback{text-align:center;padding:30px 10px;}
+.feedback h2{font-size:clamp(26px,6vw,44px);margin:.2em 0;}
+.feedback.ok h2{color:var(--ok);}
+.feedback.bad h2{color:var(--bad);}
+.correct-reveal{font-size:16px;margin-top:6px;opacity:.85;}
+.opp-banner{text-align:center;background:var(--gold);color:#3a2c00;padding:8px;border-radius:10px;font-weight:700;margin-bottom:12px;}
+.committee-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:16px;}
+.member{background:var(--card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.08);}
+.photo{width:80px;height:80px;border-radius:50%;background:#e3e3e3;margin:0 auto 10px;display:flex;
+  align-items:center;justify-content:center;font-size:30px;color:#999;}
+.small{font-size:13px;opacity:.75;}
+.footer-note{text-align:center;font-size:12px;opacity:.55;margin-top:30px;}
+.return-row{text-align:center;margin-top:20px;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;}
+.modal-box{background:var(--card);padding:26px;border-radius:14px;max-width:360px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.3);}
+.modal-box p{font-size:16px;margin:0 0 6px;}
+.modal-actions{display:flex;gap:10px;justify-content:center;margin-top:18px;}
+.btn-secondary{background:#777;color:#fff;border:none;padding:12px 28px;border-radius:24px;font-size:15px;cursor:pointer;}
+.btn-danger{background:var(--bad);color:#fff;border:none;padding:12px 28px;border-radius:24px;font-size:15px;cursor:pointer;}
+.waiting-icon{font-size:60px;}
+.dots::after{content:'\2026';animation:dotcycle 1.4s steps(4,end) infinite;}
+@keyframes dotcycle{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img id="logoTop" alt="logo">
+  <b>GRACE-FIELD COLLEGE, IBADAN — QUIZ COMPETITION</b>
+  <button onclick="go('cover')">Home</button>
+  <button onclick="go('rules')">Rules</button>
+  <button onclick="setBoard('main')">Question Board</button>
+  <button onclick="setBoard('tie')">Tie-Breaker</button>
+  <button onclick="go('committee')">Committee</button>
+  <button onclick="confirmReset()">Reset</button>
+  <button onclick="confirmEndQuiz()">End Quiz</button>
+</div>
+
+<div class="modal-overlay" id="confirmModal" style="display:none;">
+  <div class="modal-box">
+    <p id="confirmText"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="confirmNoBtn">Cancel</button>
+      <button class="btn-danger" id="confirmYesBtn">Yes, continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- COVER -->
+  <div class="screen active cover" id="s-cover">
+    <div class="card center">
+      <img id="logoCover" alt="Grace-Field College logo">
+      <h1><span class="gf">GRACE-FIELD</span> <span class="ci">COLLEGE, IBADAN</span></h1>
+      <div class="subtitle">INTER-HOUSE MATH QUIZ COMPETITION</div>
+      <p style="margin-top:14px;">Welcome to the Quiz Competition!</p>
+      <div class="addr">9, Prince Sofunmade Close, Ladapo Avenue, Off Idi-Mango Road, Soka,<br>Lagos-Ibadan Expressway, Ibadan.</div>
+      <button class="big-btn" onclick="go('rules')">Begin →</button>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="screen" id="s-rules">
+    <div class="card">
+      <h2>Quiz Rules</h2>
+      <ul class="rules">
+        <li>Each question has a maximum response time of <b>90 seconds</b>.</li>
+        <li>The Quiz Master controls the computer and confirms the participant's selected answer.</li>
+        <li>Once a question has been selected, it becomes unavailable to other participants.</li>
+        <li>A correct answer receives a positive response; an incorrect answer receives a wrong-answer alert.</li>
+        <li>If a participant answers wrongly, or does not answer within 90 seconds, the question passes to the opposing participant.</li>
+        <li>The opposing participant then has <b>30 seconds</b> to answer.</li>
+        <li>The correct answer is only revealed when the Quiz Master clicks "Show Answer" — this lets the audience keep working the problem out.</li>
+        <li>If the main round ends in a tie, use the separate <b>Tie-Breaker</b> board of 10 harder questions.</li>
+        <li>Participants must wait for the Quiz Master to confirm and select their chosen option.</li>
+        <li>The Quiz Master's decision on answer selection and timing is final.</li>
+      </ul>
+      <div class="return-row"><button class="big-btn" onclick="setBoard('main')">Go to Question Board →</button></div>
+    </div>
+  </div>
+
+  <!-- BOARD -->
+  <div class="screen" id="s-board">
+    <div class="card">
+      <h2 id="boardTitle">Question Selection Board</h2>
+      <p class="small center" id="boardSubtitle" style="display:none;">Use only if the main round ends in a tie.</p>
+      <div class="board" id="boardGrid"></div>
+    </div>
+  </div>
+
+  <!-- QUESTION -->
+  <div class="screen" id="s-question">
+    <div class="card">
+      <div class="qhead">
+        <img id="logoQ" alt="logo">
+        <span class="badge" id="qBadge">Question 1</span>
+      </div>
+      <div id="oppBanner" style="display:none" class="opp-banner">⚡ Opposing participant's turn</div>
+      <div class="timerbox">
+        <div class="timer" id="timerDisplay">90</div>
+        <div class="timerlabel" id="timerLabel">seconds remaining</div>
+      </div>
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div id="feedbackArea"></div>
+    </div>
+  </div>
+
+  <!-- COMMITTEE -->
+  <div class="screen" id="s-committee">
+    <div class="card">
+      <h2>Quiz Committee</h2>
+      <div class="committee-grid" id="committeeGrid"></div>
+      <p class="small center">Committee member details to be supplied — placeholders shown above.</p>
+      <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
+    </div>
+  </div>
+
+  <!-- END QUIZ / WAITING FOR SCORES -->
+  <div class="screen" id="s-endquiz">
+    <div class="card center">
+      <img id="logoEnd" alt="logo" style="height:90px;">
+      <div class="waiting-icon">⏳</div>
+      <h1>WAITING FOR SCORES</h1>
+      <p style="font-size:18px;">The Quiz Masters are computing the scores<span class="dots"></span></p>
+      <p class="small">Please remain seated while results are finalised.</p>
+      <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
+    </div>
+  </div>
+
+  <!-- FINAL -->
+  <div class="screen" id="s-final">
+    <div class="card center">
+      <img id="logoFinal" alt="logo" style="height:100px;">
+      <h1>THANK YOU!</h1>
+      <h2>GRACE-FIELD COLLEGE, IBADAN</h2>
+      <p>We hope you enjoyed the competition. Well done to all participants!</p>
+      <button class="big-btn" onclick="go('cover')">Home</button>
+    </div>
+  </div>
+
+  <div class="footer-note">Quiz Master console — Grace-Field College Quiz Competition</div>
+</div>
+
+<script>
+const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAG4AAAB4CAMAAAAkCjdPAAAAwFBMVEUAAAC2sLLBurkbZZinVmVii6mcNkhHep2dKjuweISZOEmdT1qXOElTcZMyY4yXOU7EwL00ZYxJa4+eRVNwaniyt8A0YoyfRFOQMTpFaZGZp6+SLTuSLTw2TXpuJ2LFwMI1Rm5diqY5VX1FU3rDvcB/Pz////81NVuhcqGqrsv/f3///wD//38/P38AAP86Vn0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEX5suAAAAMHRSTlMA/v78/f33+/n+oxdjHaYf/l9YXAz+KqEimhlVmRoK/vMSZk/+BgH+BRICAQIEAYgQsBKYAAAJVElEQVR42u1a57rjKBI1CFCwJOeb5nbunt2J+/5vtxXIkm2hns+/hm7bsszlcCpRFNpsyttut3lg25r+kXC9MbtHkjOPpNcbpR5Hb9spIUz3KLiTaYVQjxLn1gA5xNs+BK4zgprpto+xE0KT6hHqO1k0wusfxU2w+ro/5pR7WmcTE92cTzEa4W2nYEqdVonN9Ltz6nApGuDlAkUwtQaP/s6Yrufov92eAKwVeQOCp63Heoa/oVlsy9GEFC0iAmbXwTvdmTTsAr8/Pz8ro1yXUqdkNCklzRUbEAtgkUyl68DEXIfu43Kw30EokrFkaBGCURFP/4uMZbzcSbbPqk0B0gYeZ3jsaz1K8ABN5IQSNIFKkoHYbDfV7ErR5vEkYClHT15luNBcLJp9S2wi0pwzJSmuyXzhCnxSYh/IRdJy74hEmLYP/5u0hRF8q8JA7t2ZIF6iHKEpj2fnJXPd9Ut9LtBzQxHPGM3jeatSSq6QJS3XMVprMFL6QY23I8Dz1wKjT4K3fDV8VgkaxU6MK3gRWa2dCFOBK2etHNuW+/kpGpNFJgiSomYiZoqo7ocYT6pmcdTcGq+8yCDIVhKlWpV5UZO1lnkdw7V+9q281UT2NajPFMBZVxC58CbERIaM0yu1lM3GwaUmmqOhzkTKNdArgXOmqaJ4xu0TqG+/dz+qfD7CrxQlWZqDm9ADA8fGZtgCmkl/V0r+DJyK4fbCrdfoFo1BwCYRJ0+vGK5THOnBkUVs8YYluQevwoZenzij4O4I1xTCWdUHD8TmeAKcAX4G1z4TROAiXBlcCJrC+53AIBawEa1RbhbCw9kFsEiYUYz2M8dBw10g19hOSqqoUxDrewFcu88GELEsSXP+iwj0nL8iu26zJmY6D2w9OWFiNJamythhzFy+zVE5nAiyVCka/ITmIkJvl0fvCg0zgiNyvBKRCzTRek/SVPuUnVya9202O28pe2uZLcBJjL5MDYJlG1JnTANbFU2O8oyCtNYnCxBpW9oEtKwhwiI4g37R8m2D/1qWYLSad6WLOexuMOQiOQPRygkSokljorjdMjxsWlrltmQFntCFqGT11VLCogiosewwqNiNj4cTvFFiC1qovLPJLMVvqCgtsaJURkUN7wE5ERIJudQ0t1FYTnMHpEa5V5zKhp1Ei7oULgteaiunSYSP0rLm2vq+l7STNW5ZBHUvoneeep2Y5EJiLkXaR0sCQe9K0rDEbWs0Nq0vn3SNItTa7hnslb/XtEGai2wl7BD2YbUTuqqEqKpKw4W2V7UW9A1+FULX0AOX85Dfm19WRTBsFxhbwIj6Qghw5RqiwVTwtlvxfCh/KZGlSDLo7xIZXARSwsEtXZAySBFSNMSMbFksC5u9iqKFyPZcFxzzIpAkogGeviA6/KjhPn7Gu8zmvWAhl2pq9IBUI5R2okSu+rtlKGNp4jbX/LhbCIudbp+bu6jmGurt4vo0rVvzQJovCzPMjJwNHlpX843QuBPvgmwG8b7C6fxui0xzFk4I54gkTed79+jF2/JUdQKVc5Uc8A7KE343f882+zgHUZmViO+6ukIPA46z50a48H0324x8PE4a6R0Mfg5pw7EmDeuuCnNnSZ+D83WO6kbT2Z5LuuLKeWmJI8DZTV59A07IybbkviskcBxUXPkmLsdd6F2jeQh+6ZVwbbZZ43XHjkgy8sO7tceXy6JdUCh3/LJUd3arjDEZ/l8wImv6RjhgOngb7sELFeusRXGSZrW3CI7my/t6BqBRCVZ/goUIv1zojqDVD3t90trXOoLkb8P1KlKTlQv5MLRLXQMowumguQD3XejIy8UiuK3PaMlPqUZaWzBIGwABP4gdQO0hp8B1iF/EzkrE59L34NogTRgznIp4z2VqNgZz9HIvTy6Uke8ETc6gSXPIquXcQ9giqv/I0jKXHVEJLa2hvmzuStMaJL7a5NQnrto6g8jPF4pqqGeucQgHl+FZmcq45u3Hx9JnVpa+uw3ausMYtnxIwIwvqwkhsqOT5JSEaqvp+dD9zNZrj029ToYJpfc4rjFlxduHwqOEnZMeps740jhQmwo0PdXAybVZKXpxgbj3wmP71nbmMhJodqDhO0hy+bJie++HBtWBV/vadqbBwFY14de6+NSpi6jQX1deNXMHUH4qmMvoShceAm12EV7FQuUdlBJTpwi80ZQp55Rl5xb0EIXDwzgpaCAeORVjOErA5AJD6qoDw84EW6w1mQDOXpnofixh8hmckjOVsjP8H/GZNVpoXfOCF2xURuCUi4FheXLFTwzE5/+ayeFyRxjSHhUEOdICWK06ep173kDXVmBegp4mZg2w1lFAcO695mmI3XMCiBajyVZxmQlmyvvoKFFSKx98+pEQFJQEgURrTWUwS1qSFIO7tWr9gyw7k0qUdo8YRRvFNoucqlrHocS8bFa3bZ+GZ22lpqyFsO3HYP1yQX6cDTGJROvYyxlMi0iOBVobXl+P0y3EGR8Lm8MjRQY5IliJQQ4jFi6OwyzB6aMjVE6JLcT051K0G4DzeF5pTT+jiuF4bQbn17B9eh3+O/MU4RRQ+wBp+qk9no9I4Gkejbj50sKU4i5VYZKRmO5lystN/8Mc3Cuj6bBnHI8Zx3mJohgzc/x9OI7RVnMG71hN4EiqKcm+mTzbZMz7SybC13xr+2EeraIlpEoRR3COP4JEU0CVgJ2H42Gc20pneAd3n3c70/7j128D29jLe8ADOboNzvk8h1TrObxjXEKgNrfr/zyOr9++PZ29BlXTfRyGb1+//m+8Uo7QrloxfphH8wz19SrD5/98rqHBx83SB47h5z3+5eFme95GvNe05sJV7QcZP16Fq2ypudIrsebm6/Gu/lG1hqO+JpvxDhxRrAm1rq6XjGr7qqhvxSKcm+RXhvsyDNZaDpkx+78mf4Txan+/8maAnywKhquulQWrQ2qdQPftOM7Nn92fbLZmeIoJ/IkioLuVrm8L2uO9QcfxKcTxqcNqJy4aFsVb8/jMq66XKPbg1qNjXQ/5ypdryF0hnSRoXG+ZZYwOY6iP8fJxGKufb4fh180bT+lp+PIr/N/87RHyBevwU1DjYfiNxvlNR05wq/25muN4+BKGQX6HpQnMsRBxHI9f3tIxAG8oyZmOy1iOIMDZcd9eh8Js+m14ghgwjtdwDk/DsPnn2/DE7cANrobhz82/zbX/A6h6dPhlnRctAAAAAElFTkSuQmCC";
+
+// [question, [A,B,C,D], correctIndex(0-based)]
+const Q = [
+["Which of these numbers is NOT a square number?",["28","16","196","169"],0],
+["The value of 2\u2070 \u2212 2\u00b2 \u00d7 2\u207b\u2075 is:",["9/8","7/8","-7/8","-7"],1],
+["5\u00bc% of 800 km is:",["0.40 km","4.2 km","42 km","400 km"],2],
+["178.4873 rounded to 2 decimal places is:",["180","178.00","178.49","178.48"],2],
+["10/50 expressed as a percentage is:",["4%","5%","15%","20%"],3],
+["When x = 9, find the value of 27 \u2212 x:",["3","36","18","9"],2],
+["The lowest common denominator of 2/3, 4/5, 5/6, 3/10 is:",["15","30","50","60"],1],
+["The value of 18 + 27 \u00f7 3 is:",["15","18","27","21"],2],
+["The Roman numeral DCXCI represents the number:",["794","691","594","699"],1],
+["What is 580.7 \u00f7 100?",["58.07","5.807","58070","0.5807"],1],
+["Without a calculator, find \u221a(12\u00bc):",["3","3\u00bd","7/4","1\u00be"],1],
+["Find the next term: 2, 5, 9, 14, 20, \u2026",["26","27","25","28"],1],
+["Express the ratio 1/5 : 2/3 in simplest form:",["3 : 5","2 : 5","10 : 2","3 : 10"],3],
+["Which of these will NOT divide 3960 exactly?",["9","3","7","11"],2],
+["By the factor method, the square root of 289 is:",["8","9","13","17"],3],
+["0.075 expressed as a fraction in simplest form has denominator:",["40","9","3","5"],0],
+["The smallest number that 2\u2074 \u00d7 3\u00b3 \u00d7 5 \u00d7 7 must be multiplied by to make it a perfect square is:",["35","75","90","105"],3],
+["Round 0.0008243 to 4 decimal places:",["0.0008","0.00082","0.0090","0.0008243"],0],
+["Without a calculator, find \u221a(10 + 9 \u00d7 10):",["190","19","9","10"],3],
+["9400 ml expressed in litres is:",["0.094","0.94","9.4","94"],2],
+["The value of 3/4 + 5/8 is:",["7/8","9/8","11/8","13/8"],2],
+["Find the next term: 5, 8, 11, 14, \u2026",["16","17","18","19"],1],
+["0.125 expressed as a fraction in simplest form has denominator:",["40","6","8","100"],2],
+["Express the ratio 18:30 in simplest form:",["2 : 3","3 : 5","5 : 3","6 : 10"],1],
+["Round 0.006783 to 4 decimal places:",["0.0067","0.0068","0.00678","0.0070"],1]
+];
+
+// Tie-breaker bank: 10 original questions, harder than 1-25 (not from the source file)
+const TQ = [
+["Simplify: 2\u00b3 \u00d7 2\u207b\u00b9 \u00f7 2\u207b\u00b2",["8","16","32","4"],1],
+["Express 0.000375 in standard form, correct to 2 significant figures:",["3.8 \u00d7 10\u207b\u2074","3.75 \u00d7 10\u207b\u2074","3.8 \u00d7 10\u2074","375 \u00d7 10\u207b\u2076"],0],
+["Simplify \u221a50 \u2212 \u221a8, leaving your answer in surd form:",["3\u221a2","5\u221a2","2\u221a2","7\u221a2"],0],
+["Convert 101101\u2082 to base 10:",["43","45","53","47"],1],
+["The LCM and HCF of two numbers are 180 and 6. If one number is 30, find the other:",["30","36","42","24"],1],
+["A trader increases a price by 20%, then gives a 20% discount on the new price. What is the overall change from the original price?",["No change","4% decrease","4% increase","40% decrease"],1],
+["Find the next term in the sequence: 3, 8, 15, 24, 35, \u2026",["46","48","50","45"],1],
+["Simplify (2/3 + 1/4) \u00f7 (5/6 \u2212 1/3):",["11/6","6/11","11/12","2"],0],
+["Round 4.9837 \u00d7 10\u00b2 to 3 significant figures:",["498","499","500","498.4"],0],
+["The ratio of boys to girls in a class is 5:7. If there are 60 students in total, how many more girls than boys are there?",["5","10","12","15"],1]
+];
+
+const banks = {
+  main: { data: Q,  usedKey:'gfc_used_main', orderKey:'gfc_order_main', used:new Set(), order:[] },
+  tie:  { data: TQ, usedKey:'gfc_used_tie',  orderKey:'gfc_order_tie',  used:new Set(), order:[] }
+};
+
+function loadBank(name){
+  const bank = banks[name];
+  bank.order = Array.from({length:bank.data.length},(_,i)=>i);
+  try{ const o = localStorage.getItem(bank.orderKey); if(o) bank.order = JSON.parse(o); }catch(e){}
+  try{ const u = localStorage.getItem(bank.usedKey); if(u) bank.used = new Set(JSON.parse(u)); }catch(e){}
+}
+loadBank('main'); loadBank('tie');
+
+function saveBank(name){
+  const bank = banks[name];
+  try{ localStorage.setItem(bank.usedKey, JSON.stringify([...bank.used])); }catch(e){}
+  try{ localStorage.setItem(bank.orderKey, JSON.stringify(bank.order)); }catch(e){}
+}
+
+let currentBank = 'main';
+let timerId=null, curPos=null, stage=null; // stage: 'primary' | 'opponent'
+let optionEls = [];
+
+function go(name){
+  const current = document.querySelector('.screen.active');
+  if(current && current.id==='s-question' && name!=='question') clearTimer();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('active');
+  if(name==='board') renderBoard();
+}
+
+function setBoard(name){
+  currentBank = name;
+  go('board');
+}
+
+function renderBoard(){
+  const bank = banks[currentBank];
+  document.getElementById('boardTitle').textContent = currentBank==='tie' ? 'Tie-Breaker Questions (Harder)' : 'Question Selection Board';
+  document.getElementById('boardSubtitle').style.display = currentBank==='tie' ? 'block' : 'none';
+  const g = document.getElementById('boardGrid'); g.innerHTML='';
+  bank.order.forEach((_,pos)=>{
+    const b = document.createElement('button');
+    b.className = 'qnum'+(bank.used.has(pos)?' used':'');
+    b.textContent = String(pos+1).padStart(2,'0');
+    b.disabled = bank.used.has(pos);
+    b.onclick = ()=>openQuestion(pos);
+    g.appendChild(b);
+  });
+}
+
+function clearTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+
+function openQuestion(pos){
+  const bank = banks[currentBank];
+  if(bank.used.has(pos)) return;
+  curPos = pos; stage = 'primary';
+  clearTimer();
+  document.getElementById('oppBanner').style.display='none';
+  const qData = bank.data[bank.order[pos]];
+  document.getElementById('qBadge').textContent = (currentBank==='tie' ? 'Tie-Breaker Q' : 'Question ') + (pos+1);
+  document.getElementById('qText').textContent = qData[0];
+  document.getElementById('feedbackArea').innerHTML='';
+  buildOptions(qData);
+  setOptionsEnabled(true, null);
+  go('question');
+  startTimer(90, false);
+}
+
+function buildOptions(qData){
+  const wrap = document.getElementById('qOpts'); wrap.innerHTML='';
+  optionEls = [];
+  const letters=['A','B','C','D'];
+  qData[1].forEach((opt,idx)=>{
+    const b = document.createElement('button');
+    b.className='opt';
+    b.innerHTML = '<b>'+letters[idx]+'.</b> '+opt;
+    b.onclick = ()=>selectAnswer(idx);
+    wrap.appendChild(b);
+    optionEls.push(b);
+  });
+}
+
+function setOptionsEnabled(enabled, excludeIdx){
+  optionEls.forEach((b,idx)=>{ b.disabled = !enabled || idx===excludeIdx; });
+}
+
+function startTimer(seconds, isOpponent){
+  clearTimer();
+  const disp = document.getElementById('timerDisplay');
+  const label = document.getElementById('timerLabel');
+  let t = seconds;
+  disp.textContent = t; disp.classList.remove('low');
+  label.textContent = isOpponent ? 'seconds remaining (opposing participant)' : 'seconds remaining';
+  timerId = setInterval(()=>{
+    t--;
+    disp.textContent = t;
+    disp.classList.toggle('low', t<=10);
+    if(t<=0){
+      clearTimer();
+      onTimeUp();
+    }
+  },1000);
+}
+
+function onTimeUp(){
+  setOptionsEnabled(false);
+  if(stage==='primary'){
+    document.getElementById('feedbackArea').innerHTML =
+      '<div class="feedback bad"><h2>TIME UP!</h2><p>Passing to the opposing participant\u2026</p></div>';
+    setTimeout(()=>startOpponentTurn(null), 1600);
+  } else {
+    resolveUnanswered('TIME UP!');
+  }
+}
+
+function startOpponentTurn(excludeIdx){
+  stage = 'opponent';
+  document.getElementById('oppBanner').style.display='block';
+  document.getElementById('feedbackArea').innerHTML='';
+  setOptionsEnabled(true, excludeIdx);
+  if(excludeIdx!==null && excludeIdx!==undefined){ optionEls[excludeIdx].classList.add('wrong'); }
+  startTimer(30, true);
+}
+
+function selectAnswer(idx){
+  clearTimer();
+  const bank = banks[currentBank];
+  const qData = bank.data[bank.order[curPos]];
+  const correctIdx = qData[2];
+  if(idx===correctIdx){
+    setOptionsEnabled(false);
+    document.getElementById('feedbackArea').innerHTML = '<div class="feedback ok"><h2>NICE WORK! CORRECT</h2></div>'+returnBtn();
+    markUsed();
+    return;
+  }
+  optionEls[idx].classList.add('wrong');
+  setOptionsEnabled(false);
+  if(stage==='primary'){
+    document.getElementById('feedbackArea').innerHTML =
+      '<div class="feedback bad"><h2>WRONG ANSWER</h2><p>Passing to the opposing participant\u2026</p></div>';
+    setTimeout(()=>startOpponentTurn(idx), 1600);
+  } else {
+    resolveUnanswered('WRONG ANSWER');
+  }
+}
+
+function resolveUnanswered(heading){
+  document.getElementById('feedbackArea').innerHTML =
+    '<div class="feedback bad"><h2>'+heading+'</h2>'+
+    '<div id="revealWrap"><button class="big-btn" onclick="revealAnswer()">Show Answer</button></div></div>'+
+    returnBtn();
+  markUsed();
+}
+
+function revealAnswer(){
+  const bank = banks[currentBank];
+  const qData = bank.data[bank.order[curPos]];
+  optionEls[qData[2]].classList.add('correct-reveal-opt');
+  const wrap = document.getElementById('revealWrap');
+  if(wrap) wrap.innerHTML = '<p>Correct answer highlighted above \u2705</p>';
+}
+
+function returnBtn(){
+  return '<div class="return-row"><button class="big-btn" onclick="go(\'board\')">Return to Question Board</button></div>';
+}
+
+function markUsed(){
+  const bank = banks[currentBank];
+  bank.used.add(curPos);
+  saveBank(currentBank);
+}
+
+function showConfirm(message, onYes){
+  const modal = document.getElementById('confirmModal');
+  document.getElementById('confirmText').textContent = message;
+  modal.style.display = 'flex';
+  const yesBtn = document.getElementById('confirmYesBtn');
+  const noBtn = document.getElementById('confirmNoBtn');
+  function cleanup(){
+    modal.style.display = 'none';
+    yesBtn.onclick = null; noBtn.onclick = null;
+  }
+  yesBtn.onclick = ()=>{ cleanup(); onYes(); };
+  noBtn.onclick = ()=> cleanup();
+}
+
+function shuffleArray(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function confirmReset(){
+  const label = currentBank==='tie' ? 'Tie-Breaker board' : 'Question Board';
+  showConfirm('Reset the '+label+'? All questions become available again, freshly shuffled.', resetQuiz);
+}
+
+function resetQuiz(){
+  const bank = banks[currentBank];
+  bank.used = new Set();
+  shuffleArray(bank.order);
+  saveBank(currentBank);
+  clearTimer();
+  curPos = null; stage = null; optionEls = [];
+  document.getElementById('feedbackArea').innerHTML = '';
+  document.getElementById('oppBanner').style.display = 'none';
+  go('board');
+}
+
+function confirmEndQuiz(){
+  showConfirm('End the quiz now? This will show the "Waiting for Scores" screen.', endQuiz);
+}
+
+function endQuiz(){
+  clearTimer();
+  go('endquiz');
+}
+
+// Committee placeholders
+(function(){
+  const grid = document.getElementById('committeeGrid');
+  for(let i=1;i<=4;i++){
+    const d = document.createElement('div');
+    d.className='member';
+    d.innerHTML = '<div class="photo">\u{1F464}</div><b>[COMMITTEE MEMBER NAME]</b><div class="small">[POSITION / ROLE]</div><p class="small">[Short professional profile \u2014 2\u20134 sentences]</p>';
+    grid.appendChild(d);
+  }
+})();
+
+document.querySelectorAll('#logoTop,#logoCover,#logoQ,#logoFinal,#logoEnd').forEach(im=>im.src=LOGO);
+renderBoard();
+</script>
+</body>
+</html>
