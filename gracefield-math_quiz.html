@@ -81,10 +81,19 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .photo{width:80px;height:80px;border-radius:50%;background:#e3e3e3;margin:0 auto 10px;display:flex;
   align-items:center;justify-content:center;font-size:30px;color:#999;}
 .photo img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.analysis{margin-top:26px;text-align:left;}
-.analysis table{width:100%;border-collapse:collapse;margin:12px 0;}
-.analysis th,.analysis td{padding:9px;border-bottom:1px solid #aaa;text-align:left;}
-.analysis th:not(:first-child),.analysis td:not(:first-child){text-align:center;}
+#s-endquiz.active,#s-analysis.active{height:calc(100dvh - var(--topbar-height, 80px) - 84px);min-height:280px;}
+#s-endquiz .card,#s-analysis .card{height:100%;overflow-y:auto;
+  display:flex;flex-direction:column;justify-content:flex-start;}
+#s-endquiz .card > img{margin-top:auto;}
+#s-endquiz .card > .return-row{margin-bottom:auto;}
+#s-endquiz .big-btn{margin-top:12px;}
+.analysis{margin:14px auto;text-align:left;max-width:680px;width:100%;}
+.analysis h2{text-align:left;margin:10px 0;}
+.analysis p{line-height:1.5;}
+.analysis-nav{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:auto;padding-top:16px;}
+.analysis-nav button{background:var(--blue);color:#fff;border:0;border-radius:18px;padding:10px 20px;cursor:pointer;}
+.analysis-nav button:disabled{opacity:.45;cursor:not-allowed;}
+.analysis-label{font-size:14px;color:var(--blue);font-weight:700;}
 .small{font-size:13px;opacity:.75;}
 .footer-note{text-align:center;font-size:12px;opacity:.55;margin-top:30px;}
 .return-row{text-align:center;margin-top:20px;}
@@ -189,7 +198,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
     <div class="card">
       <h2>Quiz Committee</h2>
       <div class="committee-grid" id="committeeGrid"></div>
-      
+      <p class="small center">Add names and photo paths in COMMITTEE_MEMBERS near the end of this file.</p>
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
     </div>
   </div>
@@ -202,8 +211,21 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
       <h1>WAITING FOR SCORES</h1>
       <p style="font-size:18px;">The Quiz Masters are computing the scores<span class="dots"></span></p>
       <p class="small">Please remain seated while results are finalised.</p>
-      <div class="analysis" id="quizAnalysis"></div>
+      <button class="big-btn" onclick="showAnalysis()">View Missed Questions →</button>
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
+    </div>
+  </div>
+
+  <!-- ONE MISSED QUESTION PER SLIDE -->
+  <div class="screen" id="s-analysis">
+    <div class="card">
+      <div class="analysis" id="quizAnalysis"></div>
+      <div class="analysis-nav">
+        <button id="analysisPrev" onclick="changeAnalysis(-1)">← Previous</button>
+        <span id="analysisPage"></span>
+        <button id="analysisNext" onclick="changeAnalysis(1)">Next →</button>
+      </div>
+      <div class="return-row"><button onclick="go('endquiz')" class="btn-secondary">Back to waiting screen</button></div>
     </div>
   </div>
 
@@ -278,6 +300,49 @@ const TOPICS = {
     'Percentages','Sequences','Fractions','Significant figures','Ratios']
 };
 
+// Specific revision prompts for the teacher, in the original question order.
+const REVISION = {
+  main: [
+    'Recognise perfect squares by testing the integer square root of each option.',
+    'Apply zero and negative index laws, then multiply before subtracting.',
+    'Convert a mixed-number percent to a fraction or decimal before finding a percentage of a quantity.',
+    'Use the third decimal digit to round to two decimal places.',
+    'Convert a fraction to a percentage by multiplying by 100.',
+    'Substitute the given value of x and simplify the subtraction.',
+    'Find the least common multiple of the denominators 3, 5, 6 and 10.',
+    'Apply order of operations: divide before adding.',
+    'Read Roman numeral place values, including the XC combination.',
+    'Divide a decimal by 100 by moving the decimal point two places left.',
+    'Rewrite the mixed number as a decimal or improper fraction before taking its square root.',
+    'Find the increasing differences in the sequence before predicting the next term.',
+    'Clear fraction denominators to simplify a ratio of two fractions.',
+    'Test exact divisibility using division or suitable divisibility rules.',
+    'Use prime factor pairs to find the square root of 289.',
+    'Reduce the decimal fraction 75/1000 to lowest terms.',
+    'In prime factorisation, every exponent must be even for a perfect square.',
+    'Check the fifth decimal digit when rounding to four decimal places.',
+    'Multiply inside the square root before adding, then take the square root.',
+    'Convert millilitres to litres by dividing by 1000.',
+    'Use a common denominator to add 3/4 and 5/8.',
+    'Identify the constant difference in an arithmetic sequence.',
+    'Convert 0.125 to a fraction and reduce to lowest terms.',
+    'Divide both parts of a ratio by their greatest common factor.',
+    'Use the fifth decimal digit to round to four decimal places.'
+  ],
+  tie: [
+    'Combine powers of 2 by adding exponents when multiplying and subtracting when dividing.',
+    'Write the number as a value from 1 to 10 times a power of 10, then round to two significant figures.',
+    'Simplify each square root using a perfect-square factor before subtracting like surds.',
+    'Convert binary to decimal using powers of 2 at each position.',
+    'Use the product rule: first number × second number = LCM × HCF.',
+    'Apply the increase and discount successively to the changed price, not the original price twice.',
+    'Compare successive differences to find the sequence rule.',
+    'Simplify the numerator and denominator separately before dividing fractions.',
+    'Apply the power of 10, then round to three significant figures.',
+    'Find one ratio part from the total, then compare the two group sizes.'
+  ]
+};
+
 function isPermutation(value, size){
   return Array.isArray(value) && value.length===size &&
     new Set(value).size===size && value.every(n=>Number.isInteger(n) && n>=0 && n<size);
@@ -326,6 +391,7 @@ function cancelPendingOpponent(){
 }
 
 function go(name){
+  document.documentElement.style.setProperty('--topbar-height',document.querySelector('.topbar').getBoundingClientRect().height+'px');
   const current = document.querySelector('.screen.active');
   if(current && current.id==='s-question' && name!=='question'){
     clearTimer(); cancelPendingOpponent();
@@ -548,67 +614,91 @@ function confirmEndQuiz(){
   showConfirm('End the quiz now? This will show the "Waiting for Scores" screen.', endQuiz);
 }
 
+let analysisSlides=[], analysisIndex=0;
+
 function endQuiz(){
   clearTimer();
-  renderAnalysis();
+  buildAnalysis();
   go('endquiz');
+}
+
+function buildAnalysis(){
+  analysisSlides=[];
+  for(const [bankName,bank] of Object.entries(banks)){
+    for(const [key,result] of Object.entries(bank.results)){
+      const index=Number(key);
+      if(!Number.isInteger(index) || index<0 || index>=bank.data.length || !result || typeof result!=='object') continue;
+      const misses=Number(Boolean(result.primary))+Number(Boolean(result.opponent && result.opponent!=='Correct'));
+      if(!misses) continue;
+      analysisSlides.push({bankName,index,misses,topic:TOPICS[bankName][index],
+        number:bank.order.indexOf(index)+1});
+    }
+  }
+  analysisSlides.sort((a,b)=>b.misses-a.misses || a.topic.localeCompare(b.topic) ||
+    a.bankName.localeCompare(b.bankName) || a.number-b.number);
+  analysisIndex=0;
+  renderAnalysis();
+}
+
+function showAnalysis(){
+  buildAnalysis();
+  go('analysis');
+}
+
+function changeAnalysis(delta){
+  analysisIndex=Math.max(0,Math.min(analysisSlides.length-1,analysisIndex+delta));
+  renderAnalysis();
+}
+
+function addAnalysisLine(container,label,value){
+  const p=document.createElement('p');
+  const strong=document.createElement('strong');strong.textContent=label+' ';
+  p.append(strong,document.createTextNode(String(value)));
+  container.appendChild(p);
 }
 
 function renderAnalysis(){
   const container=document.getElementById('quizAnalysis');
   container.replaceChildren();
-  const heading=document.createElement('h2');
-  heading.textContent='Topics missed by participants';
+  const heading=document.createElement('h2');heading.textContent='Questions missed across the quiz';
   container.appendChild(heading);
-  let any=false;
-  for(const [bankName,bank] of Object.entries(banks)){
-    const topics=new Map();
-    for(const [key,result] of Object.entries(bank.results)){
-      const index=Number(key);
-      if(!Number.isInteger(index) || index<0 || index>=bank.data.length || !result || typeof result!=='object') continue;
-      const topic=TOPICS[bankName][index];
-      if(!topics.has(topic)) topics.set(topic,{primary:0,opponent:0,questions:[]});
-      const row=topics.get(topic);
-      if(result.primary) row.primary++;
-      if(result.opponent && result.opponent!=='Correct') row.opponent++;
-      if(result.primary || (result.opponent && result.opponent!=='Correct')){
-        const boardNumber=bank.order.indexOf(index)+1;
-        if(boardNumber>0) row.questions.push(boardNumber);
-      }
-    }
-    const missed=[...topics].filter(([,r])=>r.primary || r.opponent)
-      .sort((a,b)=>(b[1].primary+b[1].opponent)-(a[1].primary+a[1].opponent));
-    if(!missed.length) continue;
-    any=true;
-    const subheading=document.createElement('h3');
-    subheading.textContent=bankName==='tie'?'Tie-breaker':'Main round';
-    container.appendChild(subheading);
-    const table=document.createElement('table');
-    const header=document.createElement('tr');
-    for(const title of ['Topic','First participant missed','Opponent missed','Question no.']){
-      const th=document.createElement('th'); th.textContent=title;header.appendChild(th);
-    }
-    table.appendChild(header);
-    for(const [topic,r] of missed){
-      const tr=document.createElement('tr');
-      for(const value of [topic,r.primary,r.opponent,r.questions.join(', ')]){
-        const td=document.createElement('td');td.textContent=value;tr.appendChild(td);
-      }
-      table.appendChild(tr);
-    }
-    container.appendChild(table);
+  const page=document.getElementById('analysisPage');
+  const prev=document.getElementById('analysisPrev');
+  const next=document.getElementById('analysisNext');
+  if(!analysisSlides.length){
+    addAnalysisLine(container,'Result:','No missed questions have been recorded. Unfinished questions are excluded.');
+    page.textContent='No missed questions';prev.disabled=true;next.disabled=true;
+    return;
   }
-  if(!any){const p=document.createElement('p');p.textContent='No missed attempts have been recorded yet.';container.appendChild(p);}
-  const note=document.createElement('p');note.className='small';
-  note.textContent='A miss is a wrong answer or a timeout. Counts refer to attempts, not named students; a question may count for both participants. Unfinished questions are excluded.';
-  container.appendChild(note);
+  const item=analysisSlides[analysisIndex],bank=banks[item.bankName];
+  const q=bank.data[item.index];
+  const label=document.createElement('div');label.className='analysis-label';
+  label.textContent=(item.bankName==='tie'?'Tie-breaker':'Main round')+' • Question '+item.number;
+  container.appendChild(label);
+  addAnalysisLine(container,'Topic:',item.topic);
+  addAnalysisLine(container,'Question:',q[0]);
+  addAnalysisLine(container,'Correct answer:',q[1][q[2]]);
+  addAnalysisLine(container,'Missed attempts:',item.misses+' (wrong answers or timeouts on this question)');
+  addAnalysisLine(container,'Revision focus:',REVISION[item.bankName][item.index]);
+  const related=[];
+  for(const [name,otherBank] of Object.entries(banks)){
+    TOPICS[name].forEach((topic,index)=>{
+      if(topic===item.topic && !(name===item.bankName && index===item.index)){
+        related.push((name==='tie'?'Tie-breaker':'Main round')+' Q'+(otherBank.order.indexOf(index)+1));
+      }
+    });
+  }
+  if(related.length) addAnalysisLine(container,'Similar quiz questions:',related.join(', '));
+  page.textContent='Missed question '+(analysisIndex+1)+' of '+analysisSlides.length;
+  prev.disabled=analysisIndex===0;
+  next.disabled=analysisIndex===analysisSlides.length-1;
 }
 
 // Edit these entries. Put each image in a photos folder beside this HTML file.
-// Example: {name:'Amina Bello', role:'Quiz Master', profile:'Mathematics teacher.', photo:'photos/Olawale.jpg'}
+// Example: {name:'Amina Bello', role:'Quiz Master', profile:'Mathematics teacher.', photo:'photos/amina.jpg'}
 // Use photo:'' to display the person icon until a photograph is available.
 const COMMITTEE_MEMBERS = [
-  {name:'[Mr. Olawale]',role:'Quiz Master',profile:'Mathematics teacher',photo:'photos/Olawale.png'}, 
+  {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''},
   {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''},
   {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''},
   {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''}
