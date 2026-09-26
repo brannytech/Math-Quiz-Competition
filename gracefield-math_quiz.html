@@ -80,6 +80,11 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .member{background:var(--card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.08);}
 .photo{width:80px;height:80px;border-radius:50%;background:#e3e3e3;margin:0 auto 10px;display:flex;
   align-items:center;justify-content:center;font-size:30px;color:#999;}
+.photo img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.analysis{margin-top:26px;text-align:left;}
+.analysis table{width:100%;border-collapse:collapse;margin:12px 0;}
+.analysis th,.analysis td{padding:9px;border-bottom:1px solid #aaa;text-align:left;}
+.analysis th:not(:first-child),.analysis td:not(:first-child){text-align:center;}
 .small{font-size:13px;opacity:.75;}
 .footer-note{text-align:center;font-size:12px;opacity:.55;margin-top:30px;}
 .return-row{text-align:center;margin-top:20px;}
@@ -184,7 +189,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
     <div class="card">
       <h2>Quiz Committee</h2>
       <div class="committee-grid" id="committeeGrid"></div>
-      <p class="small center">Committee member details to be supplied — placeholders shown above.</p>
+      
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
     </div>
   </div>
@@ -197,6 +202,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
       <h1>WAITING FOR SCORES</h1>
       <p style="font-size:18px;">The Quiz Masters are computing the scores<span class="dots"></span></p>
       <p class="small">Please remain seated while results are finalised.</p>
+      <div class="analysis" id="quizAnalysis"></div>
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
     </div>
   </div>
@@ -261,16 +267,45 @@ const TQ = [
 ["The ratio of boys to girls in a class is 5:7. If there are 60 students in total, how many more girls than boys are there?",["5","10","12","15"],1]
 ];
 
+// Topics follow the original Q and TQ order, even when board numbers are shuffled.
+const TOPICS = {
+  main: ['Square numbers','Indices','Percentages','Rounding','Percentages',
+    'Substitution','Fractions and denominators','Order of operations','Roman numerals',
+    'Decimal division','Square roots','Sequences','Ratios','Divisibility',
+    'Square roots','Fractions','Perfect squares','Rounding','Order of operations and square roots',
+    'Unit conversion','Fractions','Sequences','Fractions','Ratios','Rounding'],
+  tie: ['Indices','Standard form','Surds','Number bases','LCM and HCF',
+    'Percentages','Sequences','Fractions','Significant figures','Ratios']
+};
+
+function isPermutation(value, size){
+  return Array.isArray(value) && value.length===size &&
+    new Set(value).size===size && value.every(n=>Number.isInteger(n) && n>=0 && n<size);
+}
+
+function makeOptionOrders(bank){
+  return bank.data.map(q=>q[1].map((_,i)=>i));
+}
+
 const banks = {
-  main: { data: Q,  usedKey:'gfc_used_main', orderKey:'gfc_order_main', used:new Set(), order:[] },
-  tie:  { data: TQ, usedKey:'gfc_used_tie',  orderKey:'gfc_order_tie',  used:new Set(), order:[] }
+  main: { data: Q, usedKey:'gfc_used_main', orderKey:'gfc_order_main', optionsKey:'gfc_options_main', resultsKey:'gfc_results_main', used:new Set(), order:[], optionOrders:[], results:{} },
+  tie: { data: TQ, usedKey:'gfc_used_tie', orderKey:'gfc_order_tie', optionsKey:'gfc_options_tie', resultsKey:'gfc_results_tie', used:new Set(), order:[], optionOrders:[], results:{} }
 };
 
 function loadBank(name){
   const bank = banks[name];
   bank.order = Array.from({length:bank.data.length},(_,i)=>i);
-  try{ const o = localStorage.getItem(bank.orderKey); if(o) bank.order = JSON.parse(o); }catch(e){}
-  try{ const u = localStorage.getItem(bank.usedKey); if(u) bank.used = new Set(JSON.parse(u)); }catch(e){}
+  bank.optionOrders = makeOptionOrders(bank);
+  try{ const o = JSON.parse(localStorage.getItem(bank.orderKey)); if(isPermutation(o,bank.data.length)) bank.order=o; }catch(e){}
+  try{ const o = JSON.parse(localStorage.getItem(bank.optionsKey));
+    if(Array.isArray(o) && o.length===bank.data.length && o.every((a,i)=>isPermutation(a,bank.data[i][1].length))) bank.optionOrders=o;
+  }catch(e){}
+  try{ const u = JSON.parse(localStorage.getItem(bank.usedKey));
+    if(Array.isArray(u)) bank.used=new Set(u.filter(n=>Number.isInteger(n) && n>=0 && n<bank.data.length));
+  }catch(e){}
+  try{ const r = JSON.parse(localStorage.getItem(bank.resultsKey));
+    if(r && typeof r==='object' && !Array.isArray(r)) bank.results=r;
+  }catch(e){}
 }
 loadBank('main'); loadBank('tie');
 
@@ -278,15 +313,24 @@ function saveBank(name){
   const bank = banks[name];
   try{ localStorage.setItem(bank.usedKey, JSON.stringify([...bank.used])); }catch(e){}
   try{ localStorage.setItem(bank.orderKey, JSON.stringify(bank.order)); }catch(e){}
+  try{ localStorage.setItem(bank.optionsKey, JSON.stringify(bank.optionOrders)); }catch(e){}
+  try{ localStorage.setItem(bank.resultsKey, JSON.stringify(bank.results)); }catch(e){}
 }
 
 let currentBank = 'main';
 let timerId=null, curPos=null, stage=null; // stage: 'primary' | 'opponent'
-let optionEls = [];
+let optionEls = [], optionOrder=[], pendingOpponent=null, activeBank=null, primaryMiss=null;
+
+function cancelPendingOpponent(){
+  if(pendingOpponent!==null){clearTimeout(pendingOpponent);pendingOpponent=null;}
+}
 
 function go(name){
   const current = document.querySelector('.screen.active');
-  if(current && current.id==='s-question' && name!=='question') clearTimer();
+  if(current && current.id==='s-question' && name!=='question'){
+    clearTimer(); cancelPendingOpponent();
+    // An interrupted question stays available, but no delayed turn can start.
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s-'+name).classList.add('active');
   if(name==='board') renderBoard();
@@ -317,27 +361,31 @@ function clearTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
 function openQuestion(pos){
   const bank = banks[currentBank];
   if(bank.used.has(pos)) return;
-  curPos = pos; stage = 'primary';
+  curPos = pos; activeBank=currentBank; stage = 'primary'; primaryMiss=null;
+  cancelPendingOpponent();
   clearTimer();
   document.getElementById('oppBanner').style.display='none';
   const qData = bank.data[bank.order[pos]];
   document.getElementById('qBadge').textContent = (currentBank==='tie' ? 'Tie-Breaker Q' : 'Question ') + (pos+1);
   document.getElementById('qText').textContent = qData[0];
   document.getElementById('feedbackArea').innerHTML='';
-  buildOptions(qData);
+  buildOptions(qData, bank.optionOrders[bank.order[pos]]);
   setOptionsEnabled(true, null);
   go('question');
   startTimer(60, false);
 }
 
-function buildOptions(qData){
+function buildOptions(qData, order){
   const wrap = document.getElementById('qOpts'); wrap.innerHTML='';
   optionEls = [];
+  optionOrder=order;
   const letters=['A','B','C','D'];
-  qData[1].forEach((opt,idx)=>{
+  order.forEach((originalIdx,idx)=>{
     const b = document.createElement('button');
     b.className='opt';
-    b.innerHTML = '<b>'+letters[idx]+'.</b> '+opt;
+    const label=document.createElement('b');
+    label.textContent=letters[idx]+'.';
+    b.append(label,document.createTextNode(' '+qData[1][originalIdx]));
     b.onclick = ()=>selectAnswer(idx);
     wrap.appendChild(b);
     optionEls.push(b);
@@ -352,11 +400,11 @@ function startTimer(seconds, isOpponent){
   clearTimer();
   const disp = document.getElementById('timerDisplay');
   const label = document.getElementById('timerLabel');
-  let t = seconds;
-  disp.textContent = t; disp.classList.remove('low');
+  const deadline=Date.now()+seconds*1000;
+  disp.textContent = seconds; disp.classList.remove('low');
   label.textContent = isOpponent ? 'seconds remaining (opposing participant)' : 'seconds remaining';
   timerId = setInterval(()=>{
-    t--;
+    const t=Math.max(0,Math.ceil((deadline-Date.now())/1000));
     disp.textContent = t;
     disp.classList.toggle('low', t<=10);
     if(t<=0){
@@ -369,12 +417,23 @@ function startTimer(seconds, isOpponent){
 function onTimeUp(){
   setOptionsEnabled(false);
   if(stage==='primary'){
+    primaryMiss='Time up';
     document.getElementById('feedbackArea').innerHTML =
       '<div class="feedback bad"><h2>TIME UP!</h2><p>Passing to the opposing participant\u2026</p></div>';
-    setTimeout(()=>startOpponentTurn(null), 1600);
+    scheduleOpponentTurn(null);
   } else {
-    resolveUnanswered('TIME UP!');
+    resolveUnanswered('TIME UP!', 'Time up');
   }
+}
+
+function scheduleOpponentTurn(excludeIdx){
+  const bankName=activeBank, position=curPos;
+  cancelPendingOpponent();
+  pendingOpponent=setTimeout(()=>{
+    pendingOpponent=null;
+    if(document.getElementById('s-question').classList.contains('active') &&
+       activeBank===bankName && curPos===position && stage==='primary') startOpponentTurn(excludeIdx);
+  },1600);
 }
 
 function startOpponentTurn(excludeIdx){
@@ -387,39 +446,49 @@ function startOpponentTurn(excludeIdx){
 }
 
 function selectAnswer(idx){
+  if(stage!=='primary' && stage!=='opponent') return;
   clearTimer();
   const bank = banks[currentBank];
   const qData = bank.data[bank.order[curPos]];
-  const correctIdx = qData[2];
-  if(idx===correctIdx){
+  if(optionOrder[idx]===qData[2]){
     setOptionsEnabled(false);
     document.getElementById('feedbackArea').innerHTML = '<div class="feedback ok"><h2>NICE WORK! CORRECT</h2></div>'+returnBtn();
+    recordResult(stage==='opponent' ? 'Correct' : null);
+    stage='complete';
     markUsed();
     return;
   }
   optionEls[idx].classList.add('wrong');
   setOptionsEnabled(false);
   if(stage==='primary'){
+    primaryMiss='Wrong answer';
     document.getElementById('feedbackArea').innerHTML =
       '<div class="feedback bad"><h2>WRONG ANSWER</h2><p>Passing to the opposing participant\u2026</p></div>';
-    setTimeout(()=>startOpponentTurn(idx), 1600);
+    scheduleOpponentTurn(idx);
   } else {
-    resolveUnanswered('WRONG ANSWER');
+    resolveUnanswered('WRONG ANSWER', 'Wrong answer');
   }
 }
 
-function resolveUnanswered(heading){
+function resolveUnanswered(heading, opponentMiss){
   document.getElementById('feedbackArea').innerHTML =
     '<div class="feedback bad"><h2>'+heading+'</h2>'+
     '<div id="revealWrap"><button class="big-btn" onclick="revealAnswer()">Show Answer</button></div></div>'+
     returnBtn();
+  recordResult(opponentMiss);
+  stage='complete';
   markUsed();
+}
+
+function recordResult(opponentResult){
+  const bank=banks[currentBank];
+  bank.results[bank.order[curPos]]={primary:primaryMiss,opponent:opponentResult};
 }
 
 function revealAnswer(){
   const bank = banks[currentBank];
   const qData = bank.data[bank.order[curPos]];
-  optionEls[qData[2]].classList.add('correct-reveal-opt');
+  optionEls[optionOrder.indexOf(qData[2])].classList.add('correct-reveal-opt');
   const wrap = document.getElementById('revealWrap');
   if(wrap) wrap.innerHTML = '<p>Correct answer highlighted above \u2705</p>';
 }
@@ -458,16 +527,18 @@ function shuffleArray(arr){
 
 function confirmReset(){
   const label = currentBank==='tie' ? 'Tie-Breaker board' : 'Question Board';
-  showConfirm('Reset the '+label+'? All questions become available again, freshly shuffled.', resetQuiz);
+  showConfirm('Reset the '+label+'? Questions and answer choices will be reshuffled and this board’s topic analysis cleared.', resetQuiz);
 }
 
 function resetQuiz(){
   const bank = banks[currentBank];
   bank.used = new Set();
+  bank.results={};
   shuffleArray(bank.order);
+  bank.optionOrders=makeOptionOrders(bank).map(order=>shuffleArray(order));
   saveBank(currentBank);
-  clearTimer();
-  curPos = null; stage = null; optionEls = [];
+  clearTimer(); cancelPendingOpponent();
+  curPos = null; activeBank=null; primaryMiss=null; stage = null; optionEls = []; optionOrder=[];
   document.getElementById('feedbackArea').innerHTML = '';
   document.getElementById('oppBanner').style.display = 'none';
   go('board');
@@ -479,16 +550,85 @@ function confirmEndQuiz(){
 
 function endQuiz(){
   clearTimer();
+  renderAnalysis();
   go('endquiz');
 }
 
-// Committee placeholders
+function renderAnalysis(){
+  const container=document.getElementById('quizAnalysis');
+  container.replaceChildren();
+  const heading=document.createElement('h2');
+  heading.textContent='Topics missed by participants';
+  container.appendChild(heading);
+  let any=false;
+  for(const [bankName,bank] of Object.entries(banks)){
+    const topics=new Map();
+    for(const [key,result] of Object.entries(bank.results)){
+      const index=Number(key);
+      if(!Number.isInteger(index) || index<0 || index>=bank.data.length || !result || typeof result!=='object') continue;
+      const topic=TOPICS[bankName][index];
+      if(!topics.has(topic)) topics.set(topic,{primary:0,opponent:0,questions:[]});
+      const row=topics.get(topic);
+      if(result.primary) row.primary++;
+      if(result.opponent && result.opponent!=='Correct') row.opponent++;
+      if(result.primary || (result.opponent && result.opponent!=='Correct')){
+        const boardNumber=bank.order.indexOf(index)+1;
+        if(boardNumber>0) row.questions.push(boardNumber);
+      }
+    }
+    const missed=[...topics].filter(([,r])=>r.primary || r.opponent)
+      .sort((a,b)=>(b[1].primary+b[1].opponent)-(a[1].primary+a[1].opponent));
+    if(!missed.length) continue;
+    any=true;
+    const subheading=document.createElement('h3');
+    subheading.textContent=bankName==='tie'?'Tie-breaker':'Main round';
+    container.appendChild(subheading);
+    const table=document.createElement('table');
+    const header=document.createElement('tr');
+    for(const title of ['Topic','First participant missed','Opponent missed','Question no.']){
+      const th=document.createElement('th'); th.textContent=title;header.appendChild(th);
+    }
+    table.appendChild(header);
+    for(const [topic,r] of missed){
+      const tr=document.createElement('tr');
+      for(const value of [topic,r.primary,r.opponent,r.questions.join(', ')]){
+        const td=document.createElement('td');td.textContent=value;tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+    container.appendChild(table);
+  }
+  if(!any){const p=document.createElement('p');p.textContent='No missed attempts have been recorded yet.';container.appendChild(p);}
+  const note=document.createElement('p');note.className='small';
+  note.textContent='A miss is a wrong answer or a timeout. Counts refer to attempts, not named students; a question may count for both participants. Unfinished questions are excluded.';
+  container.appendChild(note);
+}
+
+// Edit these entries. Put each image in a photos folder beside this HTML file.
+// Example: {name:'Amina Bello', role:'Quiz Master', profile:'Mathematics teacher.', photo:'photos/Olawale.jpg'}
+// Use photo:'' to display the person icon until a photograph is available.
+const COMMITTEE_MEMBERS = [
+  {name:'[Mr. Olawale]',role:'Quiz Master',profile:'Mathematics teacher',photo:'photos/Olawale.png'}, 
+  {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''},
+  {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''},
+  {name:'[COMMITTEE MEMBER NAME]',role:'[POSITION / ROLE]',profile:'[Short professional profile]',photo:''}
+];
+
 (function(){
   const grid = document.getElementById('committeeGrid');
-  for(let i=1;i<=4;i++){
+  for(const member of COMMITTEE_MEMBERS){
     const d = document.createElement('div');
     d.className='member';
-    d.innerHTML = '<div class="photo">\u{1F464}</div><b>[COMMITTEE MEMBER NAME]</b><div class="small">[POSITION / ROLE]</div><p class="small">[Short professional profile \u2014 2\u20134 sentences]</p>';
+    const photo=document.createElement('div');photo.className='photo';
+    if(member.photo){
+      const img=document.createElement('img');img.src=member.photo;img.alt=member.name;
+      img.onerror=()=>{photo.replaceChildren(document.createTextNode('\u{1F464}'));};
+      photo.appendChild(img);
+    } else photo.textContent='\u{1F464}';
+    const name=document.createElement('b');name.textContent=member.name;
+    const role=document.createElement('div');role.className='small';role.textContent=member.role;
+    const profile=document.createElement('p');profile.className='small';profile.textContent=member.profile;
+    d.append(photo,name,role,profile);
     grid.appendChild(d);
   }
 })();
