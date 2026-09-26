@@ -125,7 +125,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
     <div class="card center">
       <img id="logoCover" alt="Grace-Field College logo">
       <h1><span class="gf">GRACE-FIELD</span> <span class="ci">COLLEGE, IBADAN</span></h1>
-      <div class="subtitle">INTER-HOUSE MATH QUIZ COMPETITION</div>
+      <div class="subtitle">INTER-HOUSE/CLASS MATH QUIZ COMPETITION</div>
       <p style="margin-top:14px;">Welcome to the Quiz Competition!</p>
       <div class="addr">9, Prince Sofunmade Close, Ladapo Avenue, Off Idi-Mango Road, Soka,<br>Lagos-Ibadan Expressway, Ibadan.</div>
       <button class="big-btn" onclick="go('rules')">Begin →</button>
@@ -137,14 +137,14 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
     <div class="card">
       <h2>Quiz Rules</h2>
       <ul class="rules">
-        <li>Each question has a maximum response time of <b>90 seconds</b>.</li>
+        <li>Each question has a maximum response time of <b>60 seconds</b>.</li>
         <li>The Quiz Master controls the computer and confirms the participant's selected answer.</li>
         <li>Once a question has been selected, it becomes unavailable to other participants.</li>
         <li>A correct answer receives a positive response; an incorrect answer receives a wrong-answer alert.</li>
-        <li>If a participant answers wrongly, or does not answer within 90 seconds, the question passes to the opposing participant.</li>
+        <li>If a participant answers wrongly, or does not answer within 60 seconds, the question passes to the opposing participant.</li>
         <li>The opposing participant then has <b>30 seconds</b> to answer.</li>
         <li>The correct answer is only revealed when the Quiz Master clicks "Show Answer" — this lets the audience keep working the problem out.</li>
-        <li>If the main round ends in a tie, use the separate <b>Tie-Breaker</b> board of 10 harder questions.</li>
+        <li>If the main round ends in a tie, use the separate <b>Tie-Breaker</b> board of 10 questions.</li>
         <li>Participants must wait for the Quiz Master to confirm and select their chosen option.</li>
         <li>The Quiz Master's decision on answer selection and timing is final.</li>
       </ul>
@@ -170,7 +170,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
       </div>
       <div id="oppBanner" style="display:none" class="opp-banner">⚡ Opposing participant's turn</div>
       <div class="timerbox">
-        <div class="timer" id="timerDisplay">90</div>
+        <div class="timer" id="timerDisplay">60</div>
         <div class="timerlabel" id="timerLabel">seconds remaining</div>
       </div>
       <div class="qtext" id="qText"></div>
@@ -212,7 +212,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
     </div>
   </div>
 
-  <div class="footer-note">Quiz Master console — Grace-Field College Quiz Competition</div>
+  <div class="footer-note">@2026 — Grace-Field College Quiz Competition</div>
 </div>
 
 <script>
@@ -327,7 +327,7 @@ function openQuestion(pos){
   buildOptions(qData);
   setOptionsEnabled(true, null);
   go('question');
-  startTimer(90, false);
+  startTimer(60, false);
 }
 
 function buildOptions(qData){
