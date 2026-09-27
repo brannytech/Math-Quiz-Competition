@@ -20,7 +20,6 @@ html,body{height:100%;}
 body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);}
 .topbar{position:sticky;top:0;top:env(safe-area-inset-top,0px);z-index:10;background:linear-gradient(90deg,var(--red),var(--blue));
   display:flex;align-items:center;gap:10px;padding:8px 14px;flex-wrap:wrap;}
-.topbar img{height:34px;border-radius:6px;background:#fff;padding:2px;}
 .topbar b{color:#fff;font-size:15px;margin-right:auto;}
 .topbar button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);
   padding:6px 12px;border-radius:20px;font-size:13px;cursor:pointer;}
@@ -33,7 +32,19 @@ body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color
 h1{font-size:clamp(22px,5vw,34px);color:var(--red);margin:.2em 0;text-align:center;}
 h2{color:var(--blue);text-align:center;}
 .center{text-align:center;}
-.cover img{height:120px;margin-bottom:8px;}
+.logo-slot{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+  border:2px dashed var(--blue);border-radius:12px;background:#f4f6fb;color:var(--deepblue);
+  font-weight:700;text-align:center;line-height:1.2;padding:5px;box-shadow:none;overflow:hidden;}
+.logo-slot img{display:none;width:100%;height:100%;object-fit:contain;}
+.logo-slot.has-logo img{display:block;}
+.logo-slot.has-logo .logo-hint{display:none;}
+.logo-slot.has-logo{padding:0;border:0;background:transparent;box-shadow:none;}
+.logo-large{width:120px;height:120px;margin:0 auto 8px;}
+.logo-small{width:64px;height:64px;font-size:10px;border-radius:50%;flex:none;}
+.logo-small img{border-radius:50%;object-fit:cover;}
+.logo-top{width:38px;height:38px;font-size:8px;flex:none;}
+.topbar .logo-slot{padding:2px;border-radius:6px;background:#fff;color:var(--deepblue);}
+.topbar .logo-slot.has-logo{padding:0;border:0;background:transparent;box-shadow:none;}
 .cover h1{font-size:clamp(30px,7.5vw,48px);line-height:1.15;}
 .cover h1 .gf{color:var(--deepblue);}
 .cover h1 .ci{color:var(--red);}
@@ -50,7 +61,6 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .qnum:hover{background:var(--blue);color:#fff;}
 .qnum.used{border-color:#999;color:#999;background:repeating-linear-gradient(45deg,#eee,#eee 4px,#ddd 4px,#ddd 8px);cursor:not-allowed;text-decoration:line-through;}
 .qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
-.qhead img{height:44px;}
 .badge{background:var(--blue);color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;}
 .timerbox{text-align:center;margin:6px 0 18px;}
 .timer{font-size:52px;font-weight:800;color:var(--red);}
@@ -81,19 +91,12 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .photo{width:80px;height:80px;border-radius:50%;background:#e3e3e3;margin:0 auto 10px;display:flex;
   align-items:center;justify-content:center;font-size:30px;color:#999;}
 .photo img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-#s-endquiz.active,#s-analysis.active{height:calc(100dvh - var(--topbar-height, 80px) - 84px);min-height:280px;}
-#s-endquiz .card,#s-analysis .card{height:100%;overflow-y:auto;
+#s-endquiz.active{height:calc(100dvh - var(--topbar-height, 80px) - 84px);min-height:280px;}
+#s-endquiz .card{height:100%;overflow-y:auto;
   display:flex;flex-direction:column;justify-content:flex-start;}
-#s-endquiz .card > img{margin-top:auto;}
+#s-endquiz .logo-large{margin:auto auto 8px;flex:none;}
 #s-endquiz .card > .return-row{margin-bottom:auto;}
 #s-endquiz .big-btn{margin-top:12px;}
-.analysis{margin:14px auto;text-align:left;max-width:680px;width:100%;}
-.analysis h2{text-align:left;margin:10px 0;}
-.analysis p{line-height:1.5;}
-.analysis-nav{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:auto;padding-top:16px;}
-.analysis-nav button{background:var(--blue);color:#fff;border:0;border-radius:18px;padding:10px 20px;cursor:pointer;}
-.analysis-nav button:disabled{opacity:.45;cursor:not-allowed;}
-.analysis-label{font-size:14px;color:var(--blue);font-weight:700;}
 .small{font-size:13px;opacity:.75;}
 .footer-note{text-align:center;font-size:12px;opacity:.55;margin-top:30px;}
 .return-row{text-align:center;margin-top:20px;}
@@ -111,7 +114,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 <body>
 
 <div class="topbar">
-  <img id="logoTop" alt="logo">
+  <div class="logo-slot logo-top"><img alt="School logo"><span class="logo-hint">Logo</span></div>
   <b>GRACE-FIELD COLLEGE, IBADAN — QUIZ COMPETITION</b>
   <button onclick="go('cover')">Home</button>
   <button onclick="go('rules')">Rules</button>
@@ -137,7 +140,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
   <!-- COVER -->
   <div class="screen active cover" id="s-cover">
     <div class="card center">
-      <img id="logoCover" alt="Grace-Field College logo">
+      <div class="logo-slot logo-large"><img alt="School logo"><span class="logo-hint">Place logo in<br>photos/logo.png</span></div>
       <h1><span class="gf">GRACE-FIELD</span> <span class="ci">COLLEGE, IBADAN</span></h1>
       <div class="subtitle">INTER-HOUSE/CLASS MATH QUIZ COMPETITION</div>
       <p style="margin-top:14px;">Welcome to the Quiz Competition!</p>
@@ -179,7 +182,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
   <div class="screen" id="s-question">
     <div class="card">
       <div class="qhead">
-        <img id="logoQ" alt="logo">
+        <div class="logo-slot logo-small"><img alt="School logo"><span class="logo-hint">Logo</span></div>
         <span class="badge" id="qBadge">Question 1</span>
       </div>
       <div id="oppBanner" style="display:none" class="opp-banner">⚡ Opposing participant's turn</div>
@@ -206,34 +209,23 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
   <!-- END QUIZ / WAITING FOR SCORES -->
   <div class="screen" id="s-endquiz">
     <div class="card center">
-      <img id="logoEnd" alt="logo" style="height:90px;">
+      <div class="logo-slot logo-large"><img alt="School logo"><span class="logo-hint">Place logo in<br>photos/logo.png</span></div>
       <div class="waiting-icon">⏳</div>
       <h1>WAITING FOR SCORES</h1>
       <p style="font-size:18px;">The Quiz Masters are computing the scores<span class="dots"></span></p>
       <p class="small">Please remain seated while results are finalised.</p>
-      <button class="big-btn" onclick="showAnalysis()">View Missed Questions →</button>
+      <button class="big-btn" onclick="exportAnalysis()">Download Teacher Revision Report (CSV)</button>
+      <button class="big-btn" onclick="go('final')">Finish →</button>
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
     </div>
   </div>
 
-  <!-- ONE MISSED QUESTION PER SLIDE -->
-  <div class="screen" id="s-analysis">
-    <div class="card">
-      <div class="analysis" id="quizAnalysis"></div>
-      <div class="analysis-nav">
-        <button id="analysisPrev" onclick="changeAnalysis(-1)">← Previous</button>
-        <span id="analysisPage"></span>
-        <button id="analysisNext" onclick="changeAnalysis(1)">Next →</button>
-      </div>
-      <div class="return-row"><button onclick="go('endquiz')" class="btn-secondary">Back to waiting screen</button></div>
-    </div>
-  </div>
 
   <!-- FINAL -->
   <div class="screen" id="s-final">
     <div class="card center">
-      <img id="logoFinal" alt="logo" style="height:100px;">
-      <h1>THANK YOU!</h1>
+      <div class="logo-slot logo-large"><img alt="School logo"><span class="logo-hint">Place logo in<br>photos/logo.png</span></div>
+      <h1>Thank you for participating.</h1>
       <h2>GRACE-FIELD COLLEGE, IBADAN</h2>
       <p>We hope you enjoyed the competition. Well done to all participants!</p>
       <button class="big-btn" onclick="go('cover')">Home</button>
@@ -244,7 +236,6 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 </div>
 
 <script>
-const LOGO = "data:image/png;base64,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";
 
 // [question, [A,B,C,D], correctIndex(0-based)]
 const Q = [
@@ -614,84 +605,55 @@ function confirmEndQuiz(){
   showConfirm('End the quiz now? This will show the "Waiting for Scores" screen.', endQuiz);
 }
 
-let analysisSlides=[], analysisIndex=0;
-
 function endQuiz(){
   clearTimer();
-  buildAnalysis();
   go('endquiz');
 }
 
-function buildAnalysis(){
-  analysisSlides=[];
+function collectMissedQuestions(){
+  const missed=[];
   for(const [bankName,bank] of Object.entries(banks)){
     for(const [key,result] of Object.entries(bank.results)){
       const index=Number(key);
       if(!Number.isInteger(index) || index<0 || index>=bank.data.length || !result || typeof result!=='object') continue;
-      const misses=Number(Boolean(result.primary))+Number(Boolean(result.opponent && result.opponent!=='Correct'));
-      if(!misses) continue;
-      analysisSlides.push({bankName,index,misses,topic:TOPICS[bankName][index],
+      const outcomes=[result.primary,result.opponent];
+      const wrong=outcomes.filter(value=>value==='Wrong answer').length;
+      const timeouts=outcomes.filter(value=>value==='Time up').length;
+      if(wrong+timeouts===0) continue;
+      missed.push({bankName,index,wrong,timeouts,topic:TOPICS[bankName][index],
         number:bank.order.indexOf(index)+1});
     }
   }
-  analysisSlides.sort((a,b)=>b.misses-a.misses || a.topic.localeCompare(b.topic) ||
+  return missed.sort((a,b)=>a.topic.localeCompare(b.topic) ||
     a.bankName.localeCompare(b.bankName) || a.number-b.number);
-  analysisIndex=0;
-  renderAnalysis();
 }
 
-function showAnalysis(){
-  buildAnalysis();
-  go('analysis');
+function csvCell(value){
+  let content=String(value ?? '');
+  // Prevent spreadsheet programs from interpreting future question text as a formula.
+  if(/^[\s]*[=+\-@]/.test(content)) content="'"+content;
+  return '"'+content.replace(/"/g,'""')+'"';
 }
 
-function changeAnalysis(delta){
-  analysisIndex=Math.max(0,Math.min(analysisSlides.length-1,analysisIndex+delta));
-  renderAnalysis();
-}
-
-function addAnalysisLine(container,label,value){
-  const p=document.createElement('p');
-  const strong=document.createElement('strong');strong.textContent=label+' ';
-  p.append(strong,document.createTextNode(String(value)));
-  container.appendChild(p);
-}
-
-function renderAnalysis(){
-  const container=document.getElementById('quizAnalysis');
-  container.replaceChildren();
-  const heading=document.createElement('h2');heading.textContent='Questions missed across the quiz';
-  container.appendChild(heading);
-  const page=document.getElementById('analysisPage');
-  const prev=document.getElementById('analysisPrev');
-  const next=document.getElementById('analysisNext');
-  if(!analysisSlides.length){
-    addAnalysisLine(container,'Result:','No missed questions have been recorded. Unfinished questions are excluded.');
-    page.textContent='No missed questions';prev.disabled=true;next.disabled=true;
-    return;
+function exportAnalysis(){
+  const headings=['Topic','Round','Question number','Question','Correct answer',
+    'Missed attempts','Wrong answers','Timeouts','Revision focus'];
+  const rows=[headings];
+  for(const item of collectMissedQuestions()){
+    const bank=banks[item.bankName],q=bank.data[item.index];
+    rows.push([item.topic,item.bankName==='tie'?'Tie-breaker':'Main round',item.number,
+      q[0],q[1][q[2]],item.wrong+item.timeouts,item.wrong,item.timeouts,
+      REVISION[item.bankName][item.index]]);
   }
-  const item=analysisSlides[analysisIndex],bank=banks[item.bankName];
-  const q=bank.data[item.index];
-  const label=document.createElement('div');label.className='analysis-label';
-  label.textContent=(item.bankName==='tie'?'Tie-breaker':'Main round')+' • Question '+item.number;
-  container.appendChild(label);
-  addAnalysisLine(container,'Topic:',item.topic);
-  addAnalysisLine(container,'Question:',q[0]);
-  addAnalysisLine(container,'Correct answer:',q[1][q[2]]);
-  addAnalysisLine(container,'Missed attempts:',item.misses+' (wrong answers or timeouts on this question)');
-  addAnalysisLine(container,'Revision focus:',REVISION[item.bankName][item.index]);
-  const related=[];
-  for(const [name,otherBank] of Object.entries(banks)){
-    TOPICS[name].forEach((topic,index)=>{
-      if(topic===item.topic && !(name===item.bankName && index===item.index)){
-        related.push((name==='tie'?'Tie-breaker':'Main round')+' Q'+(otherBank.order.indexOf(index)+1));
-      }
-    });
-  }
-  if(related.length) addAnalysisLine(container,'Similar quiz questions:',related.join(', '));
-  page.textContent='Missed question '+(analysisIndex+1)+' of '+analysisSlides.length;
-  prev.disabled=analysisIndex===0;
-  next.disabled=analysisIndex===analysisSlides.length-1;
+  const csv='\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const link=document.createElement('a');
+  link.href=url;
+  link.download='gracefield-revision-report-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 
 // Edit these entries. Put each image in a photos folder beside this HTML file.
@@ -723,7 +685,15 @@ const COMMITTEE_MEMBERS = [
   }
 })();
 
-document.querySelectorAll('#logoTop,#logoCover,#logoQ,#logoFinal,#logoEnd').forEach(im=>im.src=LOGO);
+// Put the school logo at photos/logo.png beside this HTML file.
+// Change this path if you use a different filename or image format.
+const SCHOOL_LOGO_PATH = 'photos/logo.png';
+document.querySelectorAll('.logo-slot').forEach(slot=>{
+  const img=slot.querySelector('img');
+  img.onload=()=>slot.classList.add('has-logo');
+  img.onerror=()=>slot.classList.remove('has-logo');
+  img.src=SCHOOL_LOGO_PATH;
+});
 renderBoard();
 </script>
 </body>
