@@ -6,8 +6,8 @@
 <title>Grace-Field College Quiz Competition</title>
 <style>
 :root{
-  --red:#b91c2b; --blue:#164a9e; --deepblue:#0a2a63; --gold:#d4af37; --ink:#1c1c1c;
-  --bg:#f4f1ea; --card:#ffffff; --ok:#1a8f3c; --bad:#c0292f;
+  --red:#9e3849; --blue:#196ea4; --deepblue:#0f5b8f; --gold:#d4af37; --ink:#1c1c1c;
+  --bg:#f4f1ea; --card:#ffffff; --ok:#1a8f3c; --bad:#aa5555;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   box-sizing:border-box;
 }
@@ -16,8 +16,9 @@
 }
 :root[data-theme="dark"]{ --bg:#1b1a17; --card:#2a2825; --ink:#f2efe8; }
 *{box-sizing:border-box;}
+body { line-height: 1.6; }
 html,body{height:100%;}
-body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);}
+body{margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(135deg, var(--bg) 0%, #e2e8f0 100%);color:var(--ink); min-height: 100vh;}
 .topbar{position:sticky;top:0;top:env(safe-area-inset-top,0px);z-index:10;background:linear-gradient(90deg,var(--red),var(--blue));
   display:flex;align-items:center;gap:10px;padding:8px 14px;flex-wrap:wrap;}
 .topbar b{color:#fff;font-size:15px;margin-right:auto;}
@@ -27,8 +28,9 @@ body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color
 .wrap{max-width:900px;margin:0 auto;padding:24px 16px 60px;}
 .screen{display:none;}
 .screen.active{display:block;animation:fade .25s ease;}
-@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.card{background:var(--card);border-radius:16px;padding:26px;box-shadow:0 6px 22px rgba(0,0,0,.12);}
+@keyframes fade{from{opacity:0;transform:translateY(15px);}to{opacity:1;transform:translateY(0);}}
+.card{background:var(--card);border-radius:16px;padding:26px;box-shadow:0 10px 30px rgba(0,0,0,.15); transition: transform 0.3s ease, box-shadow 0.3s ease;}
+.card:hover{box-shadow:0 15px 35px rgba(0,0,0,.2);}
 h1{font-size:clamp(22px,5vw,34px);color:var(--red);margin:.2em 0;text-align:center;}
 h2{color:var(--blue);text-align:center;}
 .center{text-align:center;}
@@ -51,14 +53,14 @@ h2{color:var(--blue);text-align:center;}
 .subtitle{color:var(--deepblue);font-weight:700;letter-spacing:1px;text-align:center;font-size:clamp(17px,3.4vw,24px);}
 .addr{text-align:center;font-size:13px;opacity:.75;margin-top:6px;}
 .big-btn{display:block;margin:26px auto 0;background:var(--red);color:#fff;border:none;padding:14px 36px;
-  font-size:18px;border-radius:30px;cursor:pointer;box-shadow:0 4px 14px rgba(185,28,43,.4);}
-.big-btn:hover{filter:brightness(1.08);}
+  font-size:18px;border-radius:30px;cursor:pointer;box-shadow:0 4px 14px rgba(158, 56, 73, .4); transition: transform 0.2s, filter 0.2s, box-shadow 0.2s;}
+.big-btn:hover{filter:brightness(1.1); transform: translateY(-2px); box-shadow:0 6px 18px rgba(158, 56, 73, .5);}
 ul.rules{font-size:16px;line-height:1.7;}
 ul.rules li::marker{color:var(--red);font-weight:bold;}
 .board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px;}
 .qnum{aspect-ratio:1;border-radius:50%;border:3px solid var(--blue);background:var(--card);
-  font-size:20px;font-weight:700;color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.qnum:hover{background:var(--blue);color:#fff;}
+  font-size:20px;font-weight:700;color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center; transition: all 0.2s ease;}
+.qnum:hover{background:var(--blue);color:#fff; transform: scale(1.1);}
 .qnum.used{border-color:#999;color:#999;background:repeating-linear-gradient(45deg,#eee,#eee 4px,#ddd 4px,#ddd 8px);cursor:not-allowed;text-decoration:line-through;}
 .qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
 .badge{background:var(--blue);color:#fff;padding:4px 14px;border-radius:20px;font-weight:700;}
@@ -71,9 +73,9 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media (max-width:560px){.opts{grid-template-columns:1fr;}}
 .opt{background:var(--card);border:2px solid var(--blue);border-radius:12px;padding:16px;font-size:17px;
-  cursor:pointer;text-align:left;color:var(--ink);}
+  cursor:pointer;text-align:left;color:var(--ink); transition: all 0.2s ease;}
 .opt b{color:var(--blue);margin-right:8px;}
-.opt:hover:not(:disabled){background:#eef3fb;}
+.opt:hover:not(:disabled){background:#eef3fb; transform: translateX(5px);}
 .opt:disabled{cursor:not-allowed;}
 .opt.wrong{background:#ffdada;border-color:var(--bad);color:#7a0000;}
 .opt.wrong b{color:#7a0000;}
@@ -109,6 +111,55 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .waiting-icon{font-size:60px;}
 .dots::after{content:'\2026';animation:dotcycle 1.4s steps(4,end) infinite;}
 @keyframes dotcycle{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
+.puzzle-picker{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:20px;}
+.puzzle-choice{padding:16px 8px;border:2px solid var(--blue);border-radius:12px;background:var(--card);
+  color:var(--ink);font-size:19px;font-weight:700;cursor:pointer;}
+.puzzle-choice small{display:block;font-size:12px;font-weight:500;margin-top:4px;}
+.puzzle-choice:hover{background:#e6efff;color:#142b52;}
+.puzzle-rules{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px auto 12px;}
+.rule-card{display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:10px;font-size:13px;font-weight:700;}
+.rule-mini{display:grid;grid-template-columns:repeat(3,18px);gap:2px;flex:none;}
+.rule-mini span{width:18px;height:18px;display:flex;align-items:center;justify-content:center;background:#aa744e;color:white;font-size:19px;line-height:1;}
+.rule-mini .cat-icon{width:17px;height:17px;}
+.color-progress{display:flex;justify-content:center;gap:16px;margin:8px 0;}
+.progress-cat{width:38px;height:38px;display:inline-block;}
+.cat-icon{display:block;width:100%;height:100%;}
+.cell-mark:has(.cat-icon){width:65%;height:65%;}
+.puzzle-flash{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(30px,5vw,58px);background:rgba(255,255,255,.6);border-radius:6px;z-index:3;pointer-events:none;}
+.quiz-master-tools{margin-top:24px;}
+.quiz-master-tools button,.quiz-master-tools select{margin:10px 5px;}
+.puzzle-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+.puzzle-stat{font-weight:800;font-size:20px;}
+.puzzle-clock{font-size:clamp(28px,4vw,46px);font-weight:900;color:var(--deepblue);font-variant-numeric:tabular-nums;}
+.puzzle-clock.low{color:var(--bad);}
+.puzzle-board{--size:6;display:grid;grid-template-columns:repeat(var(--size),minmax(0,1fr));
+  width:min(100%,max(480px,calc(100dvh - 310px)),700px);aspect-ratio:1;
+  gap:4px;margin:10px auto;}
+.puzzle-cell{position:relative;min-width:0;border:2px solid rgba(20,30,40,.28);border-radius:8px;
+  color:#1b2631;cursor:pointer;padding:0;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+  display:flex;align-items:center;justify-content:center;}
+.puzzle-cell .cell-number{position:absolute;top:2px;left:3px;padding:1px 4px;background:rgba(255,255,255,.94);
+  border-radius:4px;color:#111;font-size:clamp(11px,1.5vw,17px);font-weight:900;z-index:2;line-height:1.2;}
+.puzzle-cell .cell-mark{font-size:clamp(21px,4vw,51px);font-weight:900;line-height:1;}
+.puzzle-cell .cell-note{position:absolute;right:2px;bottom:2px;font-size:clamp(8px,1vw,11px);
+  background:#fff;color:#111;border-radius:4px;padding:1px 2px;font-weight:800;}
+.puzzle-cell .cell-note:empty{display:none;}
+.puzzle-cell.clue{outline:4px solid #e0aa00;outline-offset:-5px;}
+.puzzle-cell.found{outline:4px solid #17854c;outline-offset:-5px;}
+.puzzle-cell.revealed{outline:4px solid #164a9e;outline-offset:-5px;}
+.puzzle-cell.wrong-claim .cell-mark{color:#b50020;text-shadow:0 1px 2px white;font-size:clamp(30px,5vw,65px);}
+.puzzle-cell.eliminated .cell-mark{color:#fff;text-shadow:0 2px 3px #202020,2px 0 3px #202020;}
+.pc-0{background:#d6ad23}.pc-1{background:#aa744e}.pc-2{background:#f4a1da}
+.pc-3{background:#9180d8}.pc-4{background:#44acc2}.pc-5{background:#da7693}
+.puzzle-controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin:12px auto;}
+.puzzle-controls button{padding:10px 16px;border-radius:20px;border:0;background:var(--blue);color:white;
+  font-size:15px;font-weight:700;cursor:pointer;}
+.puzzle-controls button:disabled{opacity:.45;cursor:not-allowed;}
+.puzzle-controls .reveal-btn{background:var(--bad);}
+.puzzle-message{text-align:center;min-height:2em;font-size:17px;font-weight:700;color:var(--red);}
+@media(max-width:560px){.puzzle-picker{grid-template-columns:repeat(2,1fr)}
+  .puzzle-board{width:min(100%,calc(100dvh - 335px));gap:2px}
+  .rule-card{font-size:11px}.puzzle-stat{font-size:16px}}
 </style>
 </head>
 <body>
@@ -120,6 +171,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
   <button onclick="go('rules')">Rules</button>
   <button onclick="setBoard('main')">Question Board</button>
   <button onclick="setBoard('tie')">Tie-Breaker</button>
+  <button onclick="go('puzzle-board')">Logic &amp; Puzzle Game</button>
   <button onclick="go('committee')">Committee</button>
   <button onclick="confirmReset()">Reset</button>
   <button onclick="confirmEndQuiz()">End Quiz</button>
@@ -162,6 +214,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
         <li>The opposing participant then has <b>30 seconds</b> to answer.</li>
         <li>The correct answer is only revealed when the Quiz Master clicks "Show Answer" — this lets the audience keep working the problem out.</li>
         <li>If the main round ends in a tie, use the separate <b>Tie-Breaker</b> board of 10 questions.</li>
+        <li>The separate <b>Logic &amp; Puzzle Game</b> has five five-minute boards. Each discovered cat earns 1 point; an incorrect cat claim deducts 0.5.</li>
         <li>Participants must wait for the Quiz Master to confirm and select their chosen option.</li>
         <li>The Quiz Master's decision on answer selection and timing is final.</li>
       </ul>
@@ -196,6 +249,40 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
     </div>
   </div>
 
+  <!-- LOGIC & PUZZLE GAME -->
+  <div class="screen" id="s-puzzle-board">
+    <div class="card">
+      <h2>Logic &amp; Puzzle Game</h2>
+      <p class="center">Select a number from 1 to 5. A selected number is taken.</p>
+      <div class="board" id="puzzlePicker"></div>
+      <details class="quiz-master-tools"><summary>Quiz-master tools</summary>
+        <button class="btn-secondary" onclick="openDemo()">Demonstration • 5 × 5</button>
+        <select id="puzzleReview" aria-label="Selected puzzle to reopen"></select>
+        <button class="btn-secondary" id="puzzleReviewButton" onclick="openPuzzle(Number(document.getElementById('puzzleReview').value))">Reopen selected puzzle</button>
+      </details>
+    </div>
+  </div>
+  <div class="screen" id="s-puzzle">
+    <div class="card">
+      <div class="puzzle-head">
+        <strong id="puzzleTitle">Puzzle 1</strong>
+        <span class="puzzle-stat" id="catsFound">Cats Found: 1/6</span>
+        <span class="puzzle-stat" id="puzzleScore">Score: 0 / 5</span>
+        <span class="puzzle-clock" id="puzzleTimer">5:00</span>
+      </div>
+      <div class="puzzle-rules" id="puzzleRules"></div>
+      <div id="puzzleColorProgress" class="color-progress" aria-label="Colours still to find"></div>
+      <p class="center small">Tell the Quiz Master a cell number. Single tap: white × or undo. Double tap: claim a cat (+1); incorrect claim −0.5. One starting cat is free.</p>
+      <div class="puzzle-board" id="puzzleGrid" aria-label="Numbered cat puzzle board"></div>
+      <div class="puzzle-message" id="puzzleMessage" role="status" aria-live="polite"></div>
+      <div class="puzzle-controls">
+        <button id="puzzlePause" onclick="pausePuzzle()">Pause</button>
+        <button id="puzzleResume" onclick="resumePuzzle()">Resume</button>
+        <button onclick="go('puzzle-board')">Return to Puzzle Selection</button>
+      </div>
+    </div>
+  </div>
+
   <!-- COMMITTEE -->
   <div class="screen" id="s-committee">
     <div class="card">
@@ -214,7 +301,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
       <h1>WAITING FOR SCORES</h1>
       <p style="font-size:18px;">The Quiz Masters are computing the scores<span class="dots"></span></p>
       <p class="small">Please remain seated while results are finalised.</p>
-      <button class="big-btn" onclick="exportAnalysis()">Download Teacher Revision Report (CSV)</button>
+      <button class="big-btn" onclick="exportAnalysis()">Download Teacher Report (CSV)</button>
       <button class="big-btn" onclick="go('final')">Finish →</button>
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
     </div>
@@ -388,9 +475,11 @@ function go(name){
     clearTimer(); cancelPendingOpponent();
     // An interrupted question stays available, but no delayed turn can start.
   }
+  if(current && current.id==='s-puzzle' && name!=='puzzle') pausePuzzle(true);
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s-'+name).classList.add('active');
   if(name==='board') renderBoard();
+  if(name==='puzzle-board') renderPuzzlePicker();
 }
 
 function setBoard(name){
@@ -583,6 +672,8 @@ function shuffleArray(arr){
 }
 
 function confirmReset(){
+  if(document.getElementById('s-puzzle').classList.contains('active') ||
+     document.getElementById('s-puzzle-board').classList.contains('active')){confirmPuzzleReset();return;}
   const label = currentBank==='tie' ? 'Tie-Breaker board' : 'Question Board';
   showConfirm('Reset the '+label+'? Questions and answer choices will be reshuffled and this board’s topic analysis cleared.', resetQuiz);
 }
@@ -629,7 +720,7 @@ function collectMissedQuestions(){
 }
 
 function csvCell(value){
-  let content=String(value ?? '');
+  let content=String(value !== undefined && value !== null ? value : '');
   // Prevent spreadsheet programs from interpreting future question text as a formula.
   if(/^[\s]*[=+\-@]/.test(content)) content="'"+content;
   return '"'+content.replace(/"/g,'""')+'"';
@@ -645,6 +736,17 @@ function exportAnalysis(){
       q[0],q[1][q[2]],item.wrong+item.timeouts,item.wrong,item.timeouts,
       REVISION[item.bankName][item.index]]);
   }
+  const played=PUZZLES.filter(p=>puzzleStates[p.id]);
+  if(played.length){
+    rows.push([],['Logic & Puzzle Game outcomes']);
+    rows.push(['Puzzle','Grid','Cats located within time','Incorrect claims within time','Score','Total cats located excluding clue (including practice)','Outcome','Time remaining']);
+    played.forEach((p,index)=>{
+      const state=puzzleStates[p.id];
+      rows.push(['Puzzle '+(PUZZLES.indexOf(p)+1),'6 × 6',state.timedCats,state.timedWrong,
+        puzzleScore(state),state.found.length-1,state.status==='expired'?'Time up — untimed practice':state.status,
+        Math.ceil(state.remainingMs/1000)+' seconds']);
+    });
+  }
   const csv='\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   const link=document.createElement('a');
@@ -654,6 +756,288 @@ function exportAnalysis(){
   link.click();
   link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+
+// Five pre-validated competition puzzles. Colours are row-major digits 0–5; cats and clue are
+// zero-based cell indexes. Keep solutions separate from DOM rendering.
+const PUZZLES = [{"id": "P01", "size": 6, "colors": "223331224311224441554000550000550000", "cats": [5, 9, 12, 20, 28, 31], "clue": 5}, {"id": "P02", "size": 6, "colors": "444002440022333322335552311111111111", "cats": [4, 7, 17, 21, 24, 32], "clue": 21}, {"id": "P03", "size": 6, "colors": "422223442223442233444553040155001111", "cats": [4, 7, 17, 21, 24, 32], "clue": 17}, {"id": "P04", "size": 6, "colors": "244433220033222003221155111555111555", "cats": [2, 11, 15, 19, 28, 30], "clue": 30}, {"id": "P05", "size": 6, "colors": "555222552222511222011134011134003334", "cats": [2, 10, 13, 23, 24, 33], "clue": 13}];
+const DEMO_PUZZLE = {"id": "DEMO", "size": 5, "colors": "2410022102021422024243310", "cats": [2, 9, 10, 18, 21], "clue": 2};
+const PUZZLE_STORAGE_KEY='gfc_logic_puzzles_v2';
+const PUZZLE_DURATION_MS=300000;
+
+function countPuzzleSolutions(puzzle, limit=2){
+  const n=puzzle.size, colors=Array.from({length:puzzle.size},()=>[]);
+  for(let index=0;index<n*n;index++) if(colors[Number(puzzle.colors[index])]) colors[Number(puzzle.colors[index])].push(index);
+  const clueColor=Number(puzzle.colors[puzzle.clue]);
+  const order=[clueColor,...Array.from({length:n},(_,i)=>i).filter(c=>c!==clueColor).sort((a,b)=>colors[a].length-colors[b].length)];
+  let count=0;
+  function search(depth,positions,rows,columns){
+    if(count>=limit)return;
+    if(depth===n){count++;return;}
+    const color=order[depth];
+    for(const index of colors[color]){
+      if(color===clueColor && index!==puzzle.clue)continue;
+      const row=Math.floor(index/n),column=index%n;
+      if(rows.has(row)||columns.has(column))continue;
+      if(positions.some(other=>Math.abs(row-Math.floor(other/n))<=1 && Math.abs(column-other%n)<=1))continue;
+      rows.add(row);columns.add(column);positions.push(index);
+      search(depth+1,positions,rows,columns);
+      positions.pop();rows.delete(row);columns.delete(column);
+    }
+  }
+  search(0,[],new Set(),new Set());
+  return count;
+}
+
+function validatePuzzle(puzzle){
+  const n=puzzle.size;
+  if(![5,6].includes(n)||puzzle.colors.length!==n*n||!/^[0-5]+$/.test(puzzle.colors)||
+     puzzle.cats.length!==n||new Set(puzzle.cats).size!==n||!puzzle.cats.includes(puzzle.clue))return false;
+  const rows=new Set(),columns=new Set(),colors=new Set();
+  for(const index of puzzle.cats){
+    if(!Number.isInteger(index)||index<0||index>=n*n)return false;
+    const row=Math.floor(index/n),column=index%n,color=puzzle.colors[index];
+    if(rows.has(row)||columns.has(column)||colors.has(color))return false;
+    if(puzzle.cats.some(other=>other!==index && Math.abs(row-Math.floor(other/n))<=1 && Math.abs(column-other%n)<=1))return false;
+    rows.add(row);columns.add(column);colors.add(color);
+  }
+  return countPuzzleSolutions(puzzle)===1;
+}
+if(PUZZLES.length!==5 || PUZZLES.some(p=>p.size!==6 || !validatePuzzle(p)) || !validatePuzzle(DEMO_PUZZLE))
+  throw new Error('A stored logic puzzle is invalid or does not have a unique solution.');
+
+let puzzleStates={};
+try{
+  const stored=JSON.parse(localStorage.getItem(PUZZLE_STORAGE_KEY));
+  if(stored && typeof stored==='object' && !Array.isArray(stored)) puzzleStates=stored;
+}catch(e){}
+// Refreshing an active board resumes it in a paused state at the saved time.
+for(const state of Object.values(puzzleStates)) if(state && state.status==='active')state.paused=true;
+let puzzleIndex=null,puzzleTimerId=null,puzzleDeadline=0,pendingTap=null;
+
+function savePuzzleStates(){try{localStorage.setItem(PUZZLE_STORAGE_KEY,JSON.stringify(puzzleStates));}catch(e){}}
+function activePuzzle(){return puzzleIndex===-1?DEMO_PUZZLE:PUZZLES[puzzleIndex];}
+function activePuzzleState(){return puzzleStates[activePuzzle().id];}
+function cancelPuzzleTap(){
+  if(pendingTap){clearTimeout(pendingTap.timer);pendingTap=null;}
+}
+function stopPuzzleTimer(){
+  if(puzzleTimerId!==null){clearInterval(puzzleTimerId);puzzleTimerId=null;}
+}
+function puzzleCanAct(){
+  if(puzzleIndex===null)return false;
+  const state=activePuzzleState();
+  if(puzzleIndex!==-1 && state.status==='active' && !state.paused && Date.now()>=puzzleDeadline)expirePuzzle();
+  return (state.status==='active' && !state.paused) || state.status==='expired';
+}
+function puzzleScore(state){return state.finalScore !== undefined ? state.finalScore : state.score;}
+function pausePuzzle(fromNavigation=false){
+  if(puzzleIndex===null)return;
+  const state=activePuzzleState();
+  cancelPuzzleTap();
+  if(puzzleIndex===-1)return;
+  if(state.status==='active' && !state.paused){
+    state.remainingMs=Math.max(0,puzzleDeadline-Date.now());
+    state.paused=true;
+    stopPuzzleTimer();
+    if(state.remainingMs===0){expirePuzzle();return;}
+    savePuzzleStates();
+  }
+  if(!fromNavigation)renderPuzzleStatus();
+}
+function resumePuzzle(){
+  if(puzzleIndex===null || puzzleIndex===-1)return;
+  const state=activePuzzleState();
+  if(state.status!=='active'||!state.paused)return;
+  state.paused=false;
+  puzzleDeadline=Date.now()+state.remainingMs;
+  savePuzzleStates();
+  stopPuzzleTimer();
+  puzzleTimerId=setInterval(tickPuzzleTimer,200);
+  renderPuzzleStatus();
+}
+function tickPuzzleTimer(){
+  if(puzzleIndex===null)return;
+  const state=activePuzzleState();
+  if(state.status!=='active'||state.paused){stopPuzzleTimer();return;}
+  state.remainingMs=Math.max(0,puzzleDeadline-Date.now());
+  if(state.remainingMs===0){expirePuzzle();return;}
+  savePuzzleStates();
+  renderPuzzleStatus();
+}
+function expirePuzzle(){
+  const state=activePuzzleState();
+  cancelPuzzleTap();stopPuzzleTimer();
+  state.remainingMs=0;state.status='expired';state.paused=false;state.finalScore=state.score;
+  state.notice='Time is up. Final score: '+state.finalScore+' / 5. Continue selecting cats for untimed practice; the score is fixed.';
+  savePuzzleStates();renderPuzzleStatus();
+}
+function renderPuzzlePicker(){
+  const container=document.getElementById('puzzlePicker');container.replaceChildren();
+  const review=document.getElementById('puzzleReview');review.replaceChildren();
+  PUZZLES.forEach((puzzle,index)=>{
+    const state=puzzleStates[puzzle.id];
+    const button=document.createElement('button');button.className='qnum'+(state?' used':'');
+    button.textContent=String(index+1);button.disabled=Boolean(state);
+    button.setAttribute('aria-label','Puzzle '+(index+1)+(state?' taken':''));
+    button.onclick=()=>openPuzzle(index);container.appendChild(button);
+    if(state){const option=document.createElement('option');option.value=index;option.textContent='Puzzle '+(index+1);review.appendChild(option);}
+  });
+  document.getElementById('puzzleReviewButton').disabled=review.children.length===0;
+}
+function openDemo(){
+  if(puzzleIndex!==null)pausePuzzle(true);
+  delete puzzleStates.DEMO;
+  openPuzzle(-1);
+}
+function openPuzzle(index){
+  if(!Number.isInteger(index)||index < -1||index>=PUZZLES.length)return;
+  if(puzzleIndex!==null && puzzleIndex!==index)pausePuzzle(true);
+  puzzleIndex=index;
+  const puzzle=activePuzzle();
+  const isNew=!puzzleStates[puzzle.id];
+  if(!puzzleStates[puzzle.id]){
+    puzzleStates[puzzle.id]={found:[puzzle.clue],eliminated:[],wrongClaims:[],score:0,timedCats:0,timedWrong:0,
+      remainingMs:PUZZLE_DURATION_MS,paused:index!==-1,status:'active',notice:''};
+    savePuzzleStates();
+  }
+  go('puzzle');
+  renderPuzzleBoard();
+  renderPuzzleStatus();
+  if(isNew && index!==-1)resumePuzzle();
+}
+function togglePuzzleElimination(index){
+  if(!puzzleCanAct())return;
+  const state=activePuzzleState();
+  if(state.found.includes(index)||state.wrongClaims.includes(index))return;
+  const pos=state.eliminated.indexOf(index);
+  if(pos===-1)state.eliminated.push(index);
+  else state.eliminated.splice(pos,1);
+  // No solution lookup here: an X is only a contestant working note.
+  savePuzzleStates();renderPuzzleBoard();
+}
+function claimPuzzleCat(index){
+  if(!puzzleCanAct())return;
+  const puzzle=activePuzzle(),state=activePuzzleState();
+  if(!Number.isInteger(index)||index<0||index>=puzzle.size*puzzle.size ||
+     state.found.includes(index)||state.wrongClaims.includes(index))return;
+  const timed=state.status==='active';
+  let feedback;
+  if(puzzle.cats.includes(index)){
+    state.found.push(index);
+    state.eliminated=state.eliminated.filter(x=>x!==index);
+    if(timed){state.score+=1;state.timedCats++;}
+    feedback='👍';
+    if(state.found.length===puzzle.size){
+      if(timed){state.remainingMs=puzzleIndex===-1?PUZZLE_DURATION_MS:Math.max(0,puzzleDeadline-Date.now());state.finalScore=state.score;}
+      state.status='completed';stopPuzzleTimer();
+      state.notice=puzzleIndex===-1?'Demonstration completed.':'All cats located. Score: '+puzzleScore(state)+' / 5.';
+    }
+  }else{
+    state.wrongClaims.push(index);
+    if(timed){state.score-=0.5;state.timedWrong++;}
+    feedback='💔';
+  }
+  savePuzzleStates();renderPuzzleBoard();renderPuzzleStatus();flashPuzzleFeedback(index,feedback);
+}
+function flashPuzzleFeedback(index,glyph){
+  const cell=document.getElementById('puzzleGrid').children[index];
+  if(!cell)return;
+  const flash=document.createElement('span');flash.className='puzzle-flash';flash.textContent=glyph;
+  cell.appendChild(flash);setTimeout(()=>flash.remove(),650);
+}
+// A black SVG silhouette is consistent across devices (unlike coloured emoji cats).
+function catIcon(color='#111'){
+  return '<svg viewBox="0 0 100 100" aria-hidden="true" class="cat-icon" style="color:'+color+'"><path fill="currentColor" d="M15 42 L12 8 L36 23 Q50 16 64 23 L88 8 L85 42 Q97 76 72 88 Q50 99 28 88 Q3 76 15 42Z"/><ellipse cx="34" cy="55" rx="6" ry="8" fill="white"/><ellipse cx="66" cy="55" rx="6" ry="8" fill="white"/><path d="M44 71 L56 71 L50 78Z" fill="white"/></svg>';
+}
+function renderPuzzleRules(){
+  const container=document.getElementById('puzzleRules');container.replaceChildren();
+  const rules=[['One cat per colour',[0,1,2,3,5,6,7,8]],
+    ['One cat per row and column',[1,3,5,7]],
+    ['Cats cannot touch (including diagonally)',[0,1,2,3,5,6,7,8]]];
+  rules.forEach(([label,crosses],ruleIndex)=>{
+    const card=document.createElement('div');card.className='rule-card';
+    const miniature=document.createElement('div');miniature.className='rule-mini';miniature.setAttribute('aria-hidden','true');
+    for(let index=0;index<9;index++){
+      const cell=document.createElement('span');
+      if(ruleIndex!==0 && !crosses.includes(index) && index!==4)cell.style.background='#ded1c4';
+      if(index===4)cell.innerHTML=catIcon();
+      else if(crosses.includes(index))cell.textContent='×';
+      miniature.appendChild(cell);
+    }
+    card.append(miniature,document.createTextNode(label));container.appendChild(card);
+  });
+}
+function handlePuzzlePointer(index,event){
+  event.preventDefault();
+  if(!puzzleCanAct())return;
+  const now=Date.now();
+  if(pendingTap && pendingTap.index===index && now-pendingTap.at<380){
+    cancelPuzzleTap();claimPuzzleCat(index);return;
+  }
+  if(pendingTap){
+    const previous=pendingTap.index;cancelPuzzleTap();togglePuzzleElimination(previous);
+  }
+  const puzzleId=activePuzzle().id;
+  pendingTap={index,at:now,timer:setTimeout(()=>{
+    pendingTap=null;
+    if(puzzleIndex!==null && activePuzzle().id===puzzleId)togglePuzzleElimination(index);
+  },330)};
+}
+function renderPuzzleBoard(){
+  if(puzzleIndex===null)return;
+  const puzzle=activePuzzle(),state=activePuzzleState(),grid=document.getElementById('puzzleGrid');
+  grid.style.setProperty('--size',puzzle.size);
+  grid.replaceChildren();
+  for(let index=0;index<puzzle.size*puzzle.size;index++){
+    const cell=document.createElement('button');cell.type='button';
+    cell.className='puzzle-cell pc-'+puzzle.colors[index];
+    const number=document.createElement('span'),mark=document.createElement('span'),note=document.createElement('span');
+    number.className='cell-number';number.textContent=index+1;
+    mark.className='cell-mark';note.className='cell-note';
+    const found=state.found.includes(index),eliminated=state.eliminated.includes(index);
+    if(found){cell.classList.add(index===puzzle.clue?'clue':'found');mark.innerHTML=catIcon();}
+    else if(state.wrongClaims.includes(index)){cell.classList.add('wrong-claim');mark.textContent='×';}
+    else if(eliminated){cell.classList.add('eliminated');mark.textContent='×';}
+    cell.append(number,mark);
+    cell.setAttribute('aria-label','Box '+(index+1)+(found?' cat':eliminated?' cancelled':''));
+    cell.addEventListener('pointerup',event=>handlePuzzlePointer(index,event));
+    cell.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){
+        event.preventDefault();
+        if(event.shiftKey)claimPuzzleCat(index);
+        else togglePuzzleElimination(index);
+      }
+    });
+    grid.appendChild(cell);
+  }
+}
+function renderPuzzleStatus(){
+  if(puzzleIndex===null)return;
+  const puzzle=activePuzzle(),state=activePuzzleState(),demo=puzzleIndex===-1;
+  document.getElementById('puzzleTitle').textContent=demo?'Quiz Master demonstration • 5 × 5':'Puzzle '+(puzzleIndex+1)+' • 6 × 6';
+  document.getElementById('catsFound').textContent='Cats: '+(state.found.length-1)+' / '+(puzzle.size-1);
+  document.getElementById('puzzleScore').textContent=(state.finalScore!==undefined?'Final score: ':'Score: ')+puzzleScore(state)+' / '+(puzzle.size-1);
+  const seconds=Math.ceil(state.remainingMs/1000),clock=document.getElementById('puzzleTimer');
+  clock.textContent=demo?'Demo':Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+  clock.classList.toggle('low',!demo && seconds<=30);
+  document.getElementById('puzzlePause').disabled=demo||state.status!=='active'||state.paused;
+  document.getElementById('puzzleResume').disabled=demo||state.status!=='active'||!state.paused;
+  document.getElementById('puzzleMessage').textContent=state.notice ||
+    (state.paused && state.status==='active'?'Timer paused. Press Resume to continue.':'');
+  const progress=document.getElementById('puzzleColorProgress');progress.replaceChildren();
+  const clueColor=Number(puzzle.colors[puzzle.clue]),palette=['#b18b13','#94603e','#d66ab1','#7764c1','#258da4','#bd4f73'];
+  for(let color=0;color<puzzle.size;color++){
+    if(color===clueColor)continue;
+    const icon=document.createElement('span'),located=state.found.some(i=>Number(puzzle.colors[i])===color);
+    icon.className='progress-cat';icon.innerHTML=catIcon(located?'#111':palette[color]);
+    icon.setAttribute('aria-label','Colour '+(color+1)+(located?' located':' still to find'));progress.appendChild(icon);
+  }
+}
+function confirmPuzzleReset(){
+  showConfirm('Reset all five logic puzzles? Their progress and outcomes will be cleared.',()=>{
+    cancelPuzzleTap();stopPuzzleTimer();puzzleIndex=null;puzzleStates={};savePuzzleStates();go('puzzle-board');
+  });
 }
 
 // Edit these entries. Put each image in a photos folder beside this HTML file.
@@ -695,6 +1079,8 @@ document.querySelectorAll('.logo-slot').forEach(slot=>{
   img.src=SCHOOL_LOGO_PATH;
 });
 renderBoard();
+renderPuzzlePicker();
+renderPuzzleRules();
 </script>
 </body>
 </html>
