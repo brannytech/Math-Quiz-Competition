@@ -160,6 +160,31 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 @media(max-width:560px){.puzzle-picker{grid-template-columns:repeat(2,1fr)}
   .puzzle-board{width:min(100%,calc(100dvh - 335px));gap:2px}
   .rule-card{font-size:11px}.puzzle-stat{font-size:16px}}
+.qnum.resumable{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,.22);}
+.mental-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;max-width:600px;margin:24px auto;}
+.mental-stats{display:flex;justify-content:center;gap:30px;font-size:24px;}
+.mental-question{font-size:clamp(30px,5vw,54px);font-weight:800;margin:36px auto;}
+#mentalAnswer{font-size:24px;color:var(--ok);font-weight:700;}
+body.puzzle-view{overflow:hidden;}
+body.puzzle-view .wrap{padding:8px 12px;}
+body.puzzle-view .footer-note{display:none;}
+#s-puzzle.active{height:calc(100dvh - var(--topbar-height,80px) - 16px);}
+#s-puzzle .card{height:100%;padding:clamp(8px,1.5vw,18px);display:flex;flex-direction:column;gap:3px;overflow:hidden;}
+#s-puzzle .card > *{flex-shrink:0;}
+#s-puzzle .puzzle-head{gap:6px;}
+#s-puzzle .puzzle-stat{font-size:clamp(13px,2vw,20px);}
+#s-puzzle .puzzle-clock{font-size:clamp(22px,3vw,36px);}
+#s-puzzle .puzzle-rules{margin:3px 0;gap:4px;}
+#s-puzzle .rule-card{padding:4px 6px;font-size:clamp(10px,1.2vw,13px);}
+#s-puzzle .color-progress{margin:3px 0;gap:12px;}
+#s-puzzle .progress-cat{width:28px;height:28px;}
+#s-puzzle .center.small{margin:3px 0;font-size:clamp(9px,1.2vw,12px);}
+#s-puzzle .puzzle-board{align-self:center;margin:0;max-width:100%;min-width:0;min-height:0;gap:3px;}
+#s-puzzle .puzzle-message{font-size:clamp(11px,1.3vw,16px);min-height:1.3em;line-height:1.3;}
+#s-puzzle .puzzle-controls{margin:3px 0;gap:6px;}
+#s-puzzle .puzzle-controls button{font-size:clamp(10px,1.2vw,14px);padding:7px 12px;}
+@media(max-width:560px){#s-puzzle .rule-mini{grid-template-columns:repeat(3,12px);gap:1px;}
+  #s-puzzle .rule-mini span{width:12px;height:12px;font-size:13px;}#s-puzzle .rule-mini .cat-icon{width:11px;height:11px;}}
 </style>
 </head>
 <body>
@@ -172,6 +197,8 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
   <button onclick="setBoard('main')">Question Board</button>
   <button onclick="setBoard('tie')">Tie-Breaker</button>
   <button onclick="go('puzzle-board')">Logic &amp; Puzzle Game</button>
+  <button onclick="go('mental-board')">Mental Maths</button>
+  <button id="resumeGame" style="display:none" onclick="resumeLastGame()">Resume Game</button>
   <button onclick="go('committee')">Committee</button>
   <button onclick="confirmReset()">Reset</button>
   <button onclick="confirmEndQuiz()">End Quiz</button>
@@ -215,6 +242,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
         <li>The correct answer is only revealed when the Quiz Master clicks "Show Answer" — this lets the audience keep working the problem out.</li>
         <li>If the main round ends in a tie, use the separate <b>Tie-Breaker</b> board of 10 questions.</li>
         <li>The separate <b>Logic &amp; Puzzle Game</b> has five five-minute boards. Each discovered cat earns 1 point; an incorrect cat claim deducts 0.5.</li>
+        <li><b>Mental Maths Sprint:</b> four sets of five displayed questions. Each question starts its 15-second timer automatically; a correct answer earns 1 point.</li>
         <li>Participants must wait for the Quiz Master to confirm and select their chosen option.</li>
         <li>The Quiz Master's decision on answer selection and timing is final.</li>
       </ul>
@@ -282,6 +310,27 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
       </div>
     </div>
   </div>
+
+  <!-- MENTAL MATHS -->
+  <div class="screen" id="s-mental-board"><div class="card">
+    <h2>Mental Maths Sprint</h2><p class="center">Choose Set 1, 2, 3 or 4. Five questions per set; 15 seconds per question; 1 point for a correct answer. Passed questions return once with their saved time.</p>
+    <div id="mentalPicker" class="mental-picker"></div>
+  </div></div>
+  <div class="screen" id="s-mental"><div class="card center">
+    <h2 id="mentalTitle"></h2><p id="mentalProgress"></p>
+    <div class="mental-stats"><strong id="mentalScore"></strong><strong id="mentalTimer"></strong></div>
+    <div id="mentalQuestion" class="mental-question"></div>
+    <p id="mentalAnswer"></p><p id="mentalStatus" role="status"></p>
+    <div class="puzzle-controls">
+      <button id="mentalStart" onclick="startMental()" style="display:none">Resume</button>
+      <button id="mentalCorrect" onclick="gradeMental('Correct')">Correct</button>
+      <button id="mentalIncorrect" onclick="gradeMental('Incorrect')">Incorrect</button>
+      <button id="mentalPass" onclick="gradeMental('Pass')">Pass</button>
+      <button id="mentalShow" onclick="showMentalAnswer()">Show Answer</button>
+      <button id="mentalNext" onclick="nextMental()">Next Question</button>
+      <button onclick="go('mental-board')">Return to Sets</button>
+    </div>
+  </div></div>
 
   <!-- COMMITTEE -->
   <div class="screen" id="s-committee">
@@ -464,22 +513,68 @@ let currentBank = 'main';
 let timerId=null, curPos=null, stage=null; // stage: 'primary' | 'opponent'
 let optionEls = [], optionOrder=[], pendingOpponent=null, activeBank=null, primaryMiss=null;
 
+const NORMAL_SESSION_KEY='gfc_unfinished_questions_v1';
+let normalSessions={main:null,tie:null},normalDeadline=0,normalRemaining=60000,pendingExclude=null;
+try{const saved=JSON.parse(localStorage.getItem(NORMAL_SESSION_KEY));if(saved && typeof saved==='object')normalSessions={main:saved.main||null,tie:saved.tie||null};}catch(e){}
+function storeNormalSessions(){try{localStorage.setItem(NORMAL_SESSION_KEY,JSON.stringify(normalSessions));}catch(e){}}
+function captureNormalSession(){
+  if(!activeBank || curPos===null || stage==='complete')return;
+  normalSessions[activeBank]={pos:curPos,stage,remaining:timerId!==null?Math.max(0,normalDeadline-Date.now()):normalRemaining,
+    primaryMiss,pending:pendingOpponent!==null,exclude:pendingExclude,
+    wrong:optionEls.map((b,i)=>b.classList.contains('wrong')?i:-1).filter(i=>i>=0),
+    disabled:optionEls.map(b=>b.disabled),feedback:document.getElementById('feedbackArea').innerHTML};
+  storeNormalSessions();
+}
+function pauseNormalQuestion(){captureNormalSession();clearTimer();cancelPendingOpponent();}
+function restoreNormalQuestion(saved){
+  curPos=saved.pos;activeBank=currentBank;stage=saved.stage;primaryMiss=saved.primaryMiss;
+  normalRemaining=saved.remaining;pendingExclude=saved.exclude;
+  const bank=banks[currentBank],q=bank.data[bank.order[curPos]];
+  document.getElementById('qBadge').textContent=(currentBank==='tie'?'Tie-Breaker Q':'Question ')+(curPos+1);
+  document.getElementById('qText').textContent=q[0];buildOptions(q,bank.optionOrders[bank.order[curPos]]);
+  optionEls.forEach((b,i)=>{b.disabled=Boolean(saved.disabled[i]);if(saved.wrong.includes(i))b.classList.add('wrong');});
+  document.getElementById('feedbackArea').innerHTML=saved.feedback||'';
+  document.getElementById('oppBanner').style.display=stage==='opponent'?'block':'none';
+  go('question');
+  if(saved.pending)startOpponentTurn(saved.exclude);
+  else if(saved.remaining<=0)onTimeUp();
+  else startTimer(saved.remaining/1000,stage==='opponent');
+}
+
 function cancelPendingOpponent(){
   if(pendingOpponent!==null){clearTimeout(pendingOpponent);pendingOpponent=null;}
+}
+
+let resumeTarget=null;
+function resumeLastGame(){
+  if(!resumeTarget)return;
+  const target=resumeTarget;
+  if(target.mode==='normal'){
+    const saved=normalSessions[target.bank];if(!saved)return;
+    currentBank=target.bank;restoreNormalQuestion(saved);
+  }else if(target.mode==='puzzle'){openPuzzle(target.index);resumePuzzle();}
+  else if(target.mode==='mental'){openMental(target.index);if(mentalStates[target.index].status==='paused')startMental();}
 }
 
 function go(name){
   document.documentElement.style.setProperty('--topbar-height',document.querySelector('.topbar').getBoundingClientRect().height+'px');
   const current = document.querySelector('.screen.active');
   if(current && current.id==='s-question' && name!=='question'){
-    clearTimer(); cancelPendingOpponent();
-    // An interrupted question stays available, but no delayed turn can start.
+    pauseNormalQuestion();
   }
   if(current && current.id==='s-puzzle' && name!=='puzzle') pausePuzzle(true);
+  if(current && current.id==='s-mental' && name!=='mental')pauseMental();
+  if(current && current.id==='s-question' && name!=='question' && normalSessions[activeBank])resumeTarget={mode:'normal',bank:activeBank};
+  if(current && current.id==='s-puzzle' && name!=='puzzle' && puzzleIndex!==null)resumeTarget={mode:'puzzle',index:puzzleIndex};
+  if(current && current.id==='s-mental' && name!=='mental' && mentalSet!==null)resumeTarget={mode:'mental',index:mentalSet};
+  document.getElementById('resumeGame').style.display=resumeTarget && !['question','puzzle','mental'].includes(name)?'inline-block':'none';
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s-'+name).classList.add('active');
   if(name==='board') renderBoard();
   if(name==='puzzle-board') renderPuzzlePicker();
+  if(name==='mental-board')renderMentalPicker();
+  document.body.classList.toggle('puzzle-view',name==='puzzle');
+  if(name==='puzzle')requestPuzzleFit();
 }
 
 function setBoard(name){
@@ -492,11 +587,17 @@ function renderBoard(){
   document.getElementById('boardTitle').textContent = currentBank==='tie' ? 'Tie-Breaker Questions (Harder)' : 'Question Selection Board';
   document.getElementById('boardSubtitle').style.display = currentBank==='tie' ? 'block' : 'none';
   const g = document.getElementById('boardGrid'); g.innerHTML='';
+  const unfinished=normalSessions[currentBank];
+  if(unfinished){
+    document.getElementById('boardSubtitle').style.display='block';
+    document.getElementById('boardSubtitle').textContent='Select highlighted question '+(unfinished.pos+1)+' to resume its saved turn and time.';
+  }else document.getElementById('boardSubtitle').textContent='Use only if the main round ends in a tie.';
   bank.order.forEach((_,pos)=>{
     const b = document.createElement('button');
-    b.className = 'qnum'+(bank.used.has(pos)?' used':'');
+    b.className = 'qnum'+(bank.used.has(pos)?' used':'')+(unfinished && unfinished.pos===pos?' resumable':'');
     b.textContent = String(pos+1).padStart(2,'0');
-    b.disabled = bank.used.has(pos);
+    b.disabled = bank.used.has(pos)||Boolean(unfinished && unfinished.pos!==pos);
+    if(unfinished && unfinished.pos===pos)b.title='Resume this unfinished question';
     b.onclick = ()=>openQuestion(pos);
     g.appendChild(b);
   });
@@ -507,6 +608,7 @@ function clearTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
 function openQuestion(pos){
   const bank = banks[currentBank];
   if(bank.used.has(pos)) return;
+  if(normalSessions[currentBank]){restoreNormalQuestion(normalSessions[currentBank]);return;}
   curPos = pos; activeBank=currentBank; stage = 'primary'; primaryMiss=null;
   cancelPendingOpponent();
   clearTimer();
@@ -546,12 +648,16 @@ function startTimer(seconds, isOpponent){
   clearTimer();
   const disp = document.getElementById('timerDisplay');
   const label = document.getElementById('timerLabel');
-  const deadline=Date.now()+seconds*1000;
-  disp.textContent = seconds; disp.classList.remove('low');
+  normalRemaining=seconds*1000;
+  normalDeadline=Date.now()+normalRemaining;
+  disp.textContent = Math.ceil(seconds); disp.classList.remove('low');
+  captureNormalSession();
   label.textContent = isOpponent ? 'seconds remaining (opposing participant)' : 'seconds remaining';
   timerId = setInterval(()=>{
-    const t=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+    const t=Math.max(0,Math.ceil((normalDeadline-Date.now())/1000));
+    normalRemaining=Math.max(0,normalDeadline-Date.now());
     disp.textContent = t;
+    captureNormalSession();
     disp.classList.toggle('low', t<=10);
     if(t<=0){
       clearTimer();
@@ -574,15 +680,18 @@ function onTimeUp(){
 
 function scheduleOpponentTurn(excludeIdx){
   const bankName=activeBank, position=curPos;
+  pendingExclude=excludeIdx;
   cancelPendingOpponent();
   pendingOpponent=setTimeout(()=>{
     pendingOpponent=null;
     if(document.getElementById('s-question').classList.contains('active') &&
        activeBank===bankName && curPos===position && stage==='primary') startOpponentTurn(excludeIdx);
   },1600);
+  captureNormalSession();
 }
 
 function startOpponentTurn(excludeIdx){
+  pendingExclude=null;
   stage = 'opponent';
   document.getElementById('oppBanner').style.display='block';
   document.getElementById('feedbackArea').innerHTML='';
@@ -646,6 +755,7 @@ function returnBtn(){
 function markUsed(){
   const bank = banks[currentBank];
   bank.used.add(curPos);
+  normalSessions[currentBank]=null;storeNormalSessions();
   saveBank(currentBank);
 }
 
@@ -672,6 +782,7 @@ function shuffleArray(arr){
 }
 
 function confirmReset(){
+  if(document.getElementById('s-mental').classList.contains('active') || document.getElementById('s-mental-board').classList.contains('active')){confirmMentalReset();return;}
   if(document.getElementById('s-puzzle').classList.contains('active') ||
      document.getElementById('s-puzzle-board').classList.contains('active')){confirmPuzzleReset();return;}
   const label = currentBank==='tie' ? 'Tie-Breaker board' : 'Question Board';
@@ -679,6 +790,8 @@ function confirmReset(){
 }
 
 function resetQuiz(){
+  resumeTarget=null;
+  normalSessions[currentBank]=null;storeNormalSessions();
   const bank = banks[currentBank];
   bank.used = new Set();
   bank.results={};
@@ -747,6 +860,13 @@ function exportAnalysis(){
         Math.ceil(state.remainingMs/1000)+' seconds']);
     });
   }
+  const mentalPlayed=Object.keys(mentalStates);
+  if(mentalPlayed.length){
+    rows.push([],['Mental Maths Sprint'],['Set','Question','Outcome','Total score']);
+    mentalPlayed.forEach(key=>{const state=mentalStates[key],score=state.results.filter(r=>r.outcome==='Correct').length;
+      state.results.forEach(r=>rows.push(['Set '+(Number(key)+1),r.question+1,r.outcome,score]));
+    });
+  }
   const csv='\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   const link=document.createElement('a');
@@ -757,6 +877,118 @@ function exportAnalysis(){
   link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+
+// Four comparable sets. The Quiz Master can show the current answer to grade a spoken response.
+const MENTAL_SETS=[
+ [['What is 48 + 27?',75],['What is 12 × 8?',96],['What is ¾ of 60?',45],['What is 25% of 80?',20],['If 3x + 4 = 19, find x.',5]],
+ [['What is 93 − 38?',55],['What is 144 ÷ 12?',12],['What is ⅖ of 75?',30],['What is 20% of 150?',30],['If 4x − 3 = 25, find x.',7]],
+ [['What is 67 + 28?',95],['What is 15 × 6?',90],['What is ⅚ of 48?',40],['What is 15% of 200?',30],['If 5x + 2 = 37, find x.',7]],
+ [['What is 102 − 47?',55],['What is 168 ÷ 14?',12],['What is ⅜ of 64?',24],['What is 30% of 90?',27],['If 6x − 5 = 31, find x.',6]]
+];
+const MENTAL_KEY='gfc_mental_sets_v1';
+let mentalStates={},mentalSet=null,mentalTimerId=null,mentalDeadline=0;
+try{const saved=JSON.parse(localStorage.getItem(MENTAL_KEY));if(saved && typeof saved==='object')mentalStates=saved;}catch(e){}
+Object.values(mentalStates).forEach(s=>{
+  if(s.status==='running')s.status='paused';
+  if(!Array.isArray(s.deferred))s.deferred=[];
+  if(s.returning===undefined)s.returning=false;
+});
+function saveMental(){try{localStorage.setItem(MENTAL_KEY,JSON.stringify(mentalStates));}catch(e){}}
+function stopMentalClock(){if(mentalTimerId!==null){clearInterval(mentalTimerId);mentalTimerId=null;}}
+function renderMentalPicker(){
+  const picker=document.getElementById('mentalPicker');picker.replaceChildren();
+  MENTAL_SETS.forEach((questions,index)=>{
+    const state=mentalStates[index],button=document.createElement('button');
+    button.className='qnum'+(state && state.status==='complete'?' used':state?' resumable':'');
+    button.textContent=String(index+1);button.disabled=Boolean(state && state.status==='complete');
+    button.setAttribute('aria-label','Set '+(index+1));
+    button.title=state?'Set '+(index+1)+' — '+state.results.filter(r=>r.outcome==='Correct').length+'/5':'Set '+(index+1)+' — five questions';
+    button.onclick=()=>openMental(index);picker.appendChild(button);
+  });
+}
+function openMental(index){
+  if(!Number.isInteger(index)||index<0||index>=MENTAL_SETS.length)return;
+  pauseMental();mentalSet=index;
+  if(!mentalStates[index])mentalStates[index]={index:0,results:[],remainingMs:15000,status:'ready',answerShown:false,deferred:[],returning:false};
+  saveMental();go('mental');renderMental();
+  if(['ready','paused'].includes(mentalStates[index].status) && !mentalStates[index].answerShown)startMental();
+}
+function pauseMental(){
+  if(mentalSet===null)return;
+  const s=mentalStates[mentalSet];
+  if(s && s.status==='running'){
+    s.remainingMs=Math.max(0,mentalDeadline-Date.now());s.status=s.remainingMs===0?'expired':'paused';
+    stopMentalClock();saveMental();
+  }
+}
+function startMental(){
+  if(mentalSet===null)return;
+  const s=mentalStates[mentalSet];if(!['ready','paused'].includes(s.status)||s.answerShown)return;
+  s.status='running';mentalDeadline=Date.now()+s.remainingMs;stopMentalClock();
+  mentalTimerId=setInterval(()=>{
+    s.remainingMs=Math.max(0,mentalDeadline-Date.now());
+    if(s.remainingMs===0){s.status='expired';stopMentalClock();}
+    saveMental();renderMental();
+  },100);saveMental();renderMental();
+}
+function gradeMental(outcome){
+  if(mentalSet===null||!['Correct','Incorrect','Pass'].includes(outcome))return;
+  const s=mentalStates[mentalSet];
+  if(!['running','paused','expired'].includes(s.status))return;
+  if(s.status==='running')s.remainingMs=Math.max(0,mentalDeadline-Date.now());
+  if(s.remainingMs===0 && outcome==='Correct')return;
+  if(outcome==='Pass' && (s.returning||s.answerShown))return;
+  if(outcome==='Pass' && s.remainingMs>0){
+    stopMentalClock();
+    s.deferred.push({question:s.index,remainingMs:s.remainingMs});
+    s.status='graded';saveMental();nextMental();return;
+  }
+  stopMentalClock();s.results.push({question:s.index,outcome:s.remainingMs===0?'Time up':outcome});
+  s.status='graded';saveMental();renderMental();
+}
+function showMentalAnswer(){
+  if(mentalSet===null)return;
+  const s=mentalStates[mentalSet];if(s.status==='complete')return;
+  // Stop timing the response when the Quiz Master checks it, allowing time to grade.
+  if(s.status==='running')pauseMental();
+  s.answerShown=true;saveMental();renderMental();
+}
+function nextMental(){
+  const s=mentalStates[mentalSet];if(s.status!=='graded')return;
+  if(!s.returning && s.index<4){
+    s.index++;s.remainingMs=15000;s.status='ready';s.answerShown=false;
+  }else if(s.deferred.length){
+    const deferred=s.deferred.shift();s.index=deferred.question;s.remainingMs=deferred.remainingMs;
+    s.returning=true;s.status='ready';s.answerShown=false;
+  }else s.status='complete';
+  saveMental();renderMental();
+  if(s.status==='ready')startMental();
+}
+function renderMental(){
+  if(mentalSet===null)return;
+  const s=mentalStates[mentalSet],score=s.results.filter(r=>r.outcome==='Correct').length;
+  document.getElementById('mentalTitle').textContent='Mental Maths Sprint • Set '+(mentalSet+1);
+  document.getElementById('mentalProgress').textContent=s.status==='complete'?'Set completed':
+    (s.returning?'Returned question ':'Question ')+(s.index+1)+' of 5'+
+    (s.deferred.length?' • '+s.deferred.length+' passed question(s) waiting':'');
+  document.getElementById('mentalScore').textContent='Score: '+score+' / 5';
+  document.getElementById('mentalTimer').textContent=s.status==='complete'?'Finished':Math.ceil(s.remainingMs/1000)+' seconds';
+  document.getElementById('mentalQuestion').textContent=s.status==='complete'?'Well done! Your set is complete.':MENTAL_SETS[mentalSet][s.index][0];
+  document.getElementById('mentalAnswer').textContent=s.answerShown && s.status!=='complete'?'Answer: '+MENTAL_SETS[mentalSet][s.index][1]:'';
+  document.getElementById('mentalStatus').textContent=s.answerShown && s.status==='paused'?'Timer stopped for checking. Mark Correct or Incorrect.':({ready:'The next question starts automatically.',paused:'Paused. Click Resume to continue.',expired:'Time is up. Record Incorrect to proceed.',graded:'Answer recorded. Click Next Question.',complete:'Final score: '+score+' / 5.'})[s.status]||
+    (s.returning?'One return only. Answer within the saved remaining time.':'Answer aloud before time runs out. Pass saves your remaining time for one return.');
+  document.getElementById('mentalStart').textContent='Resume';
+  document.getElementById('mentalStart').style.display=s.status==='paused' && !s.answerShown?'inline-block':'none';
+  document.getElementById('mentalStart').disabled=s.status!=='paused'||s.answerShown;
+  document.getElementById('mentalCorrect').disabled=!['running','paused'].includes(s.status);
+  document.getElementById('mentalIncorrect').disabled=!['running','paused','expired'].includes(s.status);
+  document.getElementById('mentalPass').disabled=document.getElementById('mentalIncorrect').disabled||s.returning||s.answerShown;
+  document.getElementById('mentalShow').disabled=s.status==='complete'||s.answerShown;
+  document.getElementById('mentalNext').disabled=s.status!=='graded';
+}
+function confirmMentalReset(){showConfirm('Reset all four Mental Maths sets and clear their scores?',()=>{
+  stopMentalClock();mentalStates={};mentalSet=null;resumeTarget=null;saveMental();go('mental-board');
+});}
 
 // Five pre-validated competition puzzles. Colours are row-major digits 0–5; cats and clue are
 // zero-based cell indexes. Keep solutions separate from DOM rendering.
@@ -1012,6 +1244,24 @@ function renderPuzzleBoard(){
     grid.appendChild(cell);
   }
 }
+function requestPuzzleFit(){
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(fitPuzzleScreen);
+}
+function fitPuzzleScreen(){
+  const screen=document.getElementById('s-puzzle');
+  if(!screen.classList.contains('active'))return;
+  const card=screen.querySelector('.card'),grid=document.getElementById('puzzleGrid');
+  const topbar=document.querySelector('.topbar');
+  document.documentElement.style.setProperty('--topbar-height',topbar.getBoundingClientRect().height+'px');
+  const style=getComputedStyle(card),paddingY=parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
+  const paddingX=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
+  let used=paddingY+(card.children.length-1)*parseFloat(style.gap||0);
+  Array.from(card.children).forEach(child=>{if(child!==grid){const cs=getComputedStyle(child);used+=child.getBoundingClientRect().height+parseFloat(cs.marginTop)+parseFloat(cs.marginBottom);}});
+  const side=Math.max(0,Math.floor(Math.min(card.clientWidth-paddingX,card.clientHeight-used)));
+  grid.style.width=side+'px';grid.style.height=side+'px';
+}
+if(typeof window!=='undefined')window.addEventListener('resize',requestPuzzleFit);
+
 function renderPuzzleStatus(){
   if(puzzleIndex===null)return;
   const puzzle=activePuzzle(),state=activePuzzleState(),demo=puzzleIndex===-1;
@@ -1033,10 +1283,11 @@ function renderPuzzleStatus(){
     icon.className='progress-cat';icon.innerHTML=catIcon(located?'#111':palette[color]);
     icon.setAttribute('aria-label','Colour '+(color+1)+(located?' located':' still to find'));progress.appendChild(icon);
   }
+  requestPuzzleFit();
 }
 function confirmPuzzleReset(){
   showConfirm('Reset all five logic puzzles? Their progress and outcomes will be cleared.',()=>{
-    cancelPuzzleTap();stopPuzzleTimer();puzzleIndex=null;puzzleStates={};savePuzzleStates();go('puzzle-board');
+    cancelPuzzleTap();stopPuzzleTimer();puzzleIndex=null;puzzleStates={};resumeTarget=null;savePuzzleStates();go('puzzle-board');
   });
 }
 
