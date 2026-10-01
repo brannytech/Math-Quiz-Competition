@@ -164,6 +164,7 @@ ul.rules li::marker{color:var(--red);font-weight:bold;}
 .mental-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;max-width:600px;margin:24px auto;}
 .mental-stats{display:flex;justify-content:center;gap:30px;font-size:24px;}
 .mental-question{font-size:clamp(30px,5vw,54px);font-weight:800;margin:36px auto;}
+.puzzle-controls button.mental-undo{font-size:11px;padding:5px 9px;background:transparent;color:var(--ink);border:1px solid #888;}
 #mentalAnswer{font-size:24px;color:var(--ok);font-weight:700;}
 body.puzzle-view{overflow:hidden;}
 body.puzzle-view .wrap{padding:8px 12px;}
@@ -328,6 +329,7 @@ body.puzzle-view .footer-note{display:none;}
       <button id="mentalPass" onclick="gradeMental('Pass')">Pass</button>
       <button id="mentalShow" onclick="showMentalAnswer()">Show Answer</button>
       <button id="mentalNext" onclick="nextMental()">Next Question</button>
+      <button id="mentalUndo" class="mental-undo" style="display:none" onclick="confirmMentalTimeUndo()">↶ Undo time-up</button>
       <button onclick="go('mental-board')">Return to Sets</button>
     </div>
   </div></div>
@@ -934,16 +936,17 @@ function startMental(){
 function gradeMental(outcome){
   if(mentalSet===null||!['Correct','Incorrect','Pass'].includes(outcome))return;
   const s=mentalStates[mentalSet];
-  if(!['running','paused','expired'].includes(s.status))return;
+  if(!['running','paused','expired','review'].includes(s.status))return;
   if(s.status==='running')s.remainingMs=Math.max(0,mentalDeadline-Date.now());
-  if(s.remainingMs===0 && outcome==='Correct')return;
+  if(s.remainingMs===0 && outcome==='Correct' && !s.timingOverride)return;
+  if(s.status==='review' && outcome==='Pass')return;
   if(outcome==='Pass' && (s.returning||s.answerShown))return;
   if(outcome==='Pass' && s.remainingMs>0){
     stopMentalClock();
     s.deferred.push({question:s.index,remainingMs:s.remainingMs});
     s.status='graded';saveMental();nextMental();return;
   }
-  stopMentalClock();s.results.push({question:s.index,outcome:s.remainingMs===0?'Time up':outcome});
+  stopMentalClock();s.results.push({question:s.index,outcome:s.remainingMs===0 && !s.timingOverride?'Time up':outcome,timingOverride:Boolean(s.timingOverride)});
   s.status='graded';saveMental();renderMental();
 }
 function showMentalAnswer(){
@@ -955,6 +958,7 @@ function showMentalAnswer(){
 }
 function nextMental(){
   const s=mentalStates[mentalSet];if(s.status!=='graded')return;
+  s.timingOverride=false;
   if(!s.returning && s.index<4){
     s.index++;s.remainingMs=15000;s.status='ready';s.answerShown=false;
   }else if(s.deferred.length){
@@ -975,16 +979,33 @@ function renderMental(){
   document.getElementById('mentalTimer').textContent=s.status==='complete'?'Finished':Math.ceil(s.remainingMs/1000)+' seconds';
   document.getElementById('mentalQuestion').textContent=s.status==='complete'?'Well done! Your set is complete.':MENTAL_SETS[mentalSet][s.index][0];
   document.getElementById('mentalAnswer').textContent=s.answerShown && s.status!=='complete'?'Answer: '+MENTAL_SETS[mentalSet][s.index][1]:'';
-  document.getElementById('mentalStatus').textContent=s.answerShown && s.status==='paused'?'Timer stopped for checking. Mark Correct or Incorrect.':({ready:'The next question starts automatically.',paused:'Paused. Click Resume to continue.',expired:'Time is up. Record Incorrect to proceed.',graded:'Answer recorded. Click Next Question.',complete:'Final score: '+score+' / 5.'})[s.status]||
+  document.getElementById('mentalStatus').textContent=s.answerShown && s.status==='paused'?'Timer stopped for checking. Mark Correct or Incorrect.':({ready:'The next question starts automatically.',paused:'Paused. Click Resume to continue.',expired:'Time is up. Use Undo time-up if the answer was spoken before time expired.',review:'Time-up undone by the Quiz Master. Check the spoken answer and mark Correct or Incorrect.',graded:'Answer recorded. Click Next Question.',complete:'Final score: '+score+' / 5.'})[s.status]||
     (s.returning?'One return only. Answer within the saved remaining time.':'Answer aloud before time runs out. Pass saves your remaining time for one return.');
   document.getElementById('mentalStart').textContent='Resume';
   document.getElementById('mentalStart').style.display=s.status==='paused' && !s.answerShown?'inline-block':'none';
   document.getElementById('mentalStart').disabled=s.status!=='paused'||s.answerShown;
-  document.getElementById('mentalCorrect').disabled=!['running','paused'].includes(s.status);
-  document.getElementById('mentalIncorrect').disabled=!['running','paused','expired'].includes(s.status);
-  document.getElementById('mentalPass').disabled=document.getElementById('mentalIncorrect').disabled||s.returning||s.answerShown;
+  document.getElementById('mentalCorrect').disabled=!['running','paused','review'].includes(s.status);
+  document.getElementById('mentalIncorrect').disabled=!['running','paused','expired','review'].includes(s.status);
+  document.getElementById('mentalPass').disabled=document.getElementById('mentalIncorrect').disabled||s.returning||s.answerShown||s.status==='review';
   document.getElementById('mentalShow').disabled=s.status==='complete'||s.answerShown;
   document.getElementById('mentalNext').disabled=s.status!=='graded';
+  document.getElementById('mentalUndo').style.display=canUndoMentalTime(s)?'inline-block':'none';
+}
+function canUndoMentalTime(s){
+  const last=s.results[s.results.length-1];
+  return s.status==='expired' || (s.status==='graded' && last && last.question===s.index && last.outcome==='Time up');
+}
+function confirmMentalTimeUndo(){
+  if(mentalSet===null)return;
+  const set=mentalSet,s=mentalStates[set],question=s.index;
+  if(!canUndoMentalTime(s))return;
+  showConfirm('Confirm that the participant answered Question '+(question+1)+' before time expired. Undo time-up and allow grading without restarting the timer?',()=>{
+    const current=mentalStates[set];
+    if(mentalSet!==set || !current || current.index!==question || !canUndoMentalTime(current))return;
+    if(current.status==='graded')current.results.pop();
+    stopMentalClock();current.status='review';current.timingOverride=true;current.remainingMs=0;
+    saveMental();renderMental();
+  });
 }
 function confirmMentalReset(){showConfirm('Reset all four Mental Maths sets and clear their scores?',()=>{
   stopMentalClock();mentalStates={};mentalSet=null;resumeTarget=null;saveMental();go('mental-board');
