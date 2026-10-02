@@ -186,7 +186,7 @@ body.puzzle-view .footer-note{display:none;}
 #s-puzzle .puzzle-controls button{font-size:clamp(10px,1.2vw,14px);padding:7px 12px;}
 @media(max-width:560px){#s-puzzle .rule-mini{grid-template-columns:repeat(3,12px);gap:1px;}
   #s-puzzle .rule-mini span{width:12px;height:12px;font-size:13px;}#s-puzzle .rule-mini .cat-icon{width:11px;height:11px;}}
-</style>
+.results-table{width:100%;border-collapse:collapse;margin:18px 0;font-size:clamp(14px,2vw,22px)}.results-table th{background:var(--deepblue);color:white;padding:10px}.results-table td{padding:12px 8px;border-bottom:1px solid #aaa;text-align:center;overflow-wrap:anywhere}.results-table td:first-child{text-align:left}.results-warning{color:var(--red);font-weight:700}.results-award{font-size:clamp(22px,4vw,38px);font-weight:800;color:var(--deepblue)}#s-results input,#s-results select{max-width:100%;padding:10px;font-size:16px}#s-results-display h3,#s-results h3{overflow-wrap:anywhere}#s-results-display .card{box-shadow:none}button:disabled{opacity:.5;cursor:not-allowed}</style>
 </head>
 <body>
 
@@ -200,6 +200,7 @@ body.puzzle-view .footer-note{display:none;}
   <button onclick="go('puzzle-board')">Logic &amp; Puzzle Game</button>
   <button onclick="go('mental-board')">Mental Maths</button>
   <button id="resumeGame" style="display:none" onclick="resumeLastGame()">Resume Game</button>
+  <button onclick="go('results')">Results</button>
   <button onclick="go('committee')">Committee</button>
   <button onclick="confirmReset()">Reset</button>
   <button onclick="confirmEndQuiz()">End Quiz</button>
@@ -353,12 +354,25 @@ body.puzzle-view .footer-note{display:none;}
       <p style="font-size:18px;">The Quiz Masters are computing the scores<span class="dots"></span></p>
       <p class="small">Please remain seated while results are finalised.</p>
       <button class="big-btn" onclick="exportAnalysis()">Download Teacher Report (CSV)</button>
+      <button class="big-btn" onclick="go('results')">Review Results</button>
       <button class="big-btn" onclick="go('final')">Finish →</button>
       <div class="return-row"><button class="big-btn" onclick="go('cover')">Home</button></div>
     </div>
   </div>
 
 
+  <div class="screen" id="s-results"><div class="card">
+    <h1>Results Review</h1><p>Quiz master review: keep this screen off the projector until you click Display Results.</p>
+    <label>Completed scoring workbook <input id="resultsFile" type="file" accept=".xlsx" onchange="importQuizResults(this.files[0])"></label>
+    <p id="resultsFilename" class="small"></p>
+    <label>Category <select id="resultsCategory" onchange="renderResultsReview()"><option>Junior</option><option>Senior</option></select></label>
+    <p id="resultsMessage" role="status" aria-live="polite">Import the completed scoring workbook to review results.</p>
+    <div id="resultsReview"></div><button class="big-btn" id="displayResults" disabled onclick="confirmDisplayResults()">Display Results</button>
+  </div></div>
+  <div class="screen" id="s-results-display"><div class="card center">
+    <div class="logo-slot logo-large"><img alt="School logo"><span class="logo-hint">Place logo in<br>photos/logo.png</span></div>
+    <div id="publicResults"></div><button class="big-btn" onclick="go('results')">Return to Review</button><button class="big-btn" onclick="go('final')">Thank you →</button>
+  </div></div>
   <!-- FINAL -->
   <div class="screen" id="s-final">
     <div class="card center">
@@ -1353,6 +1367,108 @@ document.querySelectorAll('.logo-slot').forEach(slot=>{
 renderBoard();
 renderPuzzlePicker();
 renderPuzzleRules();
+// Excel scoring template v2: read raw scores and calculate all results locally.
+let importedResults=null,resultsImportSequence=0;
+function resultNode(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
+function resultsMessage(text){document.getElementById('resultsMessage').textContent=text;}
+async function readQuizWorkbook(file){
+ if(file.size>20*1024*1024)throw Error('Workbook is too large. Maximum size is 20 MB.');
+ const bytes=new Uint8Array(await file.arrayBuffer()),view=new DataView(bytes.buffer),decoder=new TextDecoder();
+ let end=-1;for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--)if(view.getUint32(i,true)===0x06054b50){end=i;break;}
+ if(end<0)throw Error('Please select a valid .xlsx workbook.');
+ const count=view.getUint16(end+10,true),entries=new Map();let pos=view.getUint32(end+16,true);
+ if(count>2000)throw Error('Workbook contains too many files.');
+ for(let i=0;i<count;i++){
+  if(pos+46>bytes.length||view.getUint32(pos,true)!==0x02014b50)throw Error('Workbook ZIP directory is invalid.');
+  const nameLength=view.getUint16(pos+28,true),extra=view.getUint16(pos+30,true),comment=view.getUint16(pos+32,true);
+  const name=decoder.decode(bytes.subarray(pos+46,pos+46+nameLength));
+  entries.set(name,{flags:view.getUint16(pos+8,true),method:view.getUint16(pos+10,true),size:view.getUint32(pos+20,true),expanded:view.getUint32(pos+24,true),offset:view.getUint32(pos+42,true)});pos+=46+nameLength+extra+comment;
+ }
+ async function xml(path,optional=false){
+  const entry=entries.get(path);if(!entry){if(optional)return null;throw Error('Missing workbook component: '+path);}
+  if(entry.flags&1)throw Error('Password-protected workbooks cannot be imported.');
+  if(entry.expanded>10*1024*1024)throw Error('Workbook XML is too large.');
+  const p=entry.offset;if(p+30>bytes.length||view.getUint32(p,true)!==0x04034b50)throw Error('Invalid workbook entry.');
+  const start=p+30+view.getUint16(p+26,true)+view.getUint16(p+28,true);if(start+entry.size>bytes.length)throw Error('Truncated workbook.');
+  let data=bytes.subarray(start,start+entry.size);
+  if(entry.method===8){
+   if(typeof DecompressionStream==='undefined')throw Error('Use a current Chrome or Edge browser to import Excel workbooks.');
+   const reader=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();const chunks=[];let size=0;
+   try{for(;;){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>10*1024*1024)throw Error('Workbook XML is too large.');chunks.push(part.value);}}catch(e){await reader.cancel();throw e;}
+   data=new Uint8Array(size);let offset=0;for(const chunk of chunks){data.set(chunk,offset);offset+=chunk.length;}
+  }else if(entry.method!==0)throw Error('Unsupported workbook compression.');
+  const doc=new DOMParser().parseFromString(decoder.decode(data),'application/xml');if(doc.querySelector('parsererror'))throw Error('Workbook contains invalid XML.');return doc;
+ }
+ const book=await xml('xl/workbook.xml'),rels=await xml('xl/_rels/workbook.xml.rels');const strings=await xml('xl/sharedStrings.xml',true);
+ const textOf=node=>Array.from(node.getElementsByTagNameNS('*','t')).map(t=>t.textContent).join('');
+ const shared=strings?Array.from(strings.getElementsByTagNameNS('*','si')).map(textOf):[];
+ const targets=new Map(Array.from(rels.getElementsByTagNameNS('*','Relationship')).map(r=>[r.getAttribute('Id'),r.getAttribute('Target')]));
+ const result={};
+ for(const category of ['Junior','Senior']){
+  const sheet=Array.from(book.getElementsByTagNameNS('*','sheet')).find(s=>s.getAttribute('name')===category);if(!sheet)throw Error('Workbook must contain Junior and Senior sheets.');
+  const id=sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'),target=targets.get(id);if(!target)throw Error('Missing '+category+' sheet relationship.');
+  const parts=(target.startsWith('/')?target.slice(1):'xl/'+target).split('/'),clean=[];for(const part of parts){if(part==='..')clean.pop();else if(part!=='.')clean.push(part);}
+  const doc=await xml(clean.join('/')),cells=new Map();
+  for(const cell of doc.getElementsByTagNameNS('*','c')){
+   const type=cell.getAttribute('t'),value=cell.getElementsByTagNameNS('*','v')[0]?.textContent;
+   let data=null;if(type==='s')data=shared[Number(value)];else if(type==='inlineStr')data=textOf(cell);else if(type==='e')data={error:value};else if(type==='str'||type==='b')data=value;else if(value!==undefined&&value!=='')data=Number(value);
+   cells.set(cell.getAttribute('r'),data);
+  }
+  result[category]=parseQuizScores(cells,category);
+ }
+ return result;
+}
+function parseQuizScores(cells,category){
+ const get=ref=>cells.get(ref),issues=[],warnings=[];
+ if(get('A27')!=='Team'||get('C27')!=='Logic round 1'||get('D27')!=='Logic round 2'||get('F27')!=='Maths round 1'||get('G27')!=='Maths round 2')return {category,teams:[],issues:['Use the latest two-round scoring template.'],warnings};
+ const numeric=(ref,label,required)=>{const v=get(ref);if(v===null||v===undefined||v===''){if(required)issues.push(label+': enter a score, or 0 if not played.');return null;}if(typeof v!=='number'||!Number.isFinite(v)){issues.push(label+': enter a numeric score.');return null;}return v;};
+ const teams=[0,1].map(index=>{
+  const column=index===0?'B':'C',row=28+index,name=String(get(column+'13')??'').trim(),rosterColumn=index===0?'E':'G';
+  if(!name)issues.push('Team '+(index+1)+': enter a team name.');
+  const questionScores=Array.from({length:10},(_,i)=>numeric(column+(14+i),(name||'Team '+(index+1))+' question '+(i+1),false));
+  if(!questionScores.some(v=>v!==null))issues.push(name+': enter Main Quiz scores, or 0 in Question 1 if not played.');
+  const logic=[numeric('C'+row,name+' Logic round 1',true),numeric('D'+row,name+' Logic round 2',true)];
+  const mental=[numeric('F'+row,name+' Maths round 1',true),numeric('G'+row,name+' Maths round 2',true)];
+  const students=Array.from({length:6},(_,i)=>String(get(rosterColumn+(14+i))??'').trim()).filter(Boolean);
+  const main=questionScores.reduce((sum,v)=>sum+(v??0),0),logicTotal=logic.reduce((sum,v)=>sum+(v??0),0),mentalTotal=mental.reduce((sum,v)=>sum+(v??0),0);
+  return {name,students,questionScores,logic,mental,main,logicTotal,mentalTotal,total:Math.round((main+logicTotal+mentalTotal)*1e8)/1e8};
+ });
+ if(teams[0].name.toLowerCase()===teams[1].name.toLowerCase())issues.push('Team names must be different.');
+ if(teams[0].questionScores.filter(v=>v!==null).length!==teams[1].questionScores.filter(v=>v!==null).length)warnings.push('The teams have different numbers of scored Main Quiz questions. Review before display.');
+ return {category,teams,issues,warnings,tieWinner:null};
+}
+async function importQuizResults(file){
+ if(!file)return;const sequence=++resultsImportSequence;importedResults=null;renderResultsReview();resultsMessage('Reading workbook…');
+ try{const results=await readQuizWorkbook(file);if(sequence!==resultsImportSequence)return;importedResults=results;document.getElementById('resultsFilename').textContent=file.name;renderResultsReview();}catch(e){if(sequence===resultsImportSequence)resultsMessage('Import failed: '+e.message);}
+}
+function currentResults(){return importedResults?.[document.getElementById('resultsCategory').value];}
+function rankedResults(result){const teams=result.teams.map((t,i)=>({...t,index:i}));teams.sort((a,b)=>b.total-a.total||(result.tieWinner===a.index?-1:result.tieWinner===b.index?1:a.index-b.index));return teams;}
+function resultsTable(result){
+ const table=resultNode('table',undefined,'results-table'),head=resultNode('tr');for(const h of ['Team','Main Quiz','Logic total','Maths total','Overall'])head.appendChild(resultNode('th',h));table.appendChild(head);
+ for(const team of rankedResults(result)){const tr=resultNode('tr');for(const v of [team.name,team.main,team.logicTotal,team.mentalTotal,team.total])tr.appendChild(resultNode('td',String(v)));table.appendChild(tr);}
+ return table;
+}
+function renderResultsReview(){
+ const panel=document.getElementById('resultsReview');panel.replaceChildren();document.getElementById('displayResults').disabled=true;const result=currentResults();if(!result){resultsMessage('Import the completed scoring workbook to review results.');return;}
+ resultsMessage(result.issues.length?'Correct the following entries in Excel and import again.':'Scores checked. Totals have been recalculated from individual questions and round scores.');
+ for(const issue of [...result.issues,...result.warnings])panel.appendChild(resultNode('p',issue,'results-warning'));
+ if(!result.teams.length)return;panel.appendChild(resultsTable(result));
+ for(const team of result.teams){panel.appendChild(resultNode('h3',team.name));panel.appendChild(resultNode('p','Logic rounds: '+team.logic.join(' + ')+' · Mental Maths rounds: '+team.mental.join(' + ')));panel.appendChild(resultNode('p','Students: '+(team.students.join(', ')||'No student names entered.')));}
+ if(!result.issues.length&&result.teams[0].total===result.teams[1].total){
+  panel.appendChild(resultNode('p','Equal totals. Display as a tie, or record the winner of a completed tie-breaker.','results-warning'));
+  const select=resultNode('select');select.id='resultsTieWinner';select.appendChild(new Option('Display as a tie',''));result.teams.forEach((t,i)=>select.appendChild(new Option(t.name,String(i))));select.value=result.tieWinner===null?'':String(result.tieWinner);
+  select.onchange=()=>{const proposed=select.value;select.value=result.tieWinner===null?'':String(result.tieWinner);if(proposed===''){result.tieWinner=null;renderResultsReview();}else showConfirm('Confirm '+result.teams[Number(proposed)].name+' won the tie-breaker? Original session scores will stay unchanged.',()=>{result.tieWinner=Number(proposed);renderResultsReview();});};panel.appendChild(select);
+ }
+ document.getElementById('displayResults').disabled=result.issues.length>0;
+}
+function confirmDisplayResults(){const result=currentResults();if(!result||result.issues.length)return;showConfirm('Display '+result.category+' results to the audience?',()=>{
+ const panel=document.getElementById('publicResults');panel.replaceChildren();panel.appendChild(resultNode('h1',result.category+' Results'));const teams=rankedResults(result),tie=teams[0].total===teams[1].total;
+ panel.appendChild(resultNode('h2',tie&&result.tieWinner===null?'Joint first place':'🏆 Winner: '+teams[0].name));
+ if(tie&&result.tieWinner===null)panel.appendChild(resultNode('p',teams.map(t=>t.name).join(' and ')+' — '+teams[0].total+' points each','results-award'));
+ else{panel.appendChild(resultNode('p',teams[0].total+' points'+(tie?' · Won on tie-breaker':''),'results-award'));panel.appendChild(resultNode('h2','Runner-up: '+teams[1].name));}
+ panel.appendChild(resultsTable(result));for(const team of teams){panel.appendChild(resultNode('h3',team.name));panel.appendChild(resultNode('p',team.students.join(' · ')));}go('results-display');
+ });}
+
 </script>
 </body>
 </html>
