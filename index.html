@@ -233,7 +233,7 @@ body.board-view .footer-note{display:none;}
     <div class="card center">
       <div class="logo-slot logo-large"><img alt="School logo"><span class="logo-hint">Place logo in<br>photos/logo.png</span></div>
       <h1><span class="gf">GRACE-FIELD</span> <span class="ci">COLLEGE, IBADAN</span></h1>
-      <div class="subtitle">INTER-HOUSE/CLASS MATH QUIZ COMPETITION</div>
+      <div class="subtitle">INTER-CLASS MATH QUIZ COMPETITION</div>
       <p style="margin-top:14px;">Welcome to the Quiz Competition!</p>
       <div class="addr">9, Prince Sofunmade Close, Ladapo Avenue, Off Idi-Mango Road, Soka,<br>Lagos-Ibadan Expressway, Ibadan.</div>
       <button class="big-btn" onclick="go('rules')">Begin →</button>
@@ -611,7 +611,7 @@ function setBoard(name){
 
 function renderBoard(){
   const bank = banks[currentBank];
-  document.getElementById('boardTitle').textContent = currentBank==='tie' ? 'Tie-Breaker Questions (Harder)' : 'Question Selection Board';
+  document.getElementById('boardTitle').textContent = currentBank==='tie' ? 'Extra Questions' : 'Question Selection Board';
   document.getElementById('boardSubtitle').style.display = currentBank==='tie' ? 'block' : 'none';
   const g = document.getElementById('boardGrid'); g.innerHTML='';
   const unfinished=normalSessions[currentBank];
